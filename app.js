@@ -137,7 +137,7 @@ const PANELS = [
 const BLOCK = {}; PANELS.forEach(p => p.blocks.forEach(b => BLOCK[b.k] = b));
 
 async function enterGroup(){
-  G = {entries: [], done: false, at: null, tab: 'fill', peer: {loaded: false, entries: [], clusters: [], done: [], at: null, f: {wg: '', kind: '', q: ''}}, vote: {open: false, dots: 5, clusters: [], mine: {}, dirty: false}};
+  G = {entries: [], done: false, at: null, tab: 'map', peer: {loaded: false, entries: [], clusters: [], done: [], at: null, f: {wg: '', kind: '', q: ''}}, vote: {open: false, dots: 5, clusters: [], mine: {}, dirty: false}};
   shell(whoHtml()); view('<p class="loadmsg">กำลังโหลดข้อมูลของกลุ่มงาน…</p>');
   try {
     const r = await rpc('sx_my_entries', {p_pass: session.pass, p_wg: session.wg});
@@ -146,7 +146,7 @@ async function enterGroup(){
     await loadVote(true);
   } catch(e){ if (e.auth) return logout('เชื่อมต่อไม่สำเร็จ กรุณาเข้าใหม่อีกครั้ง'); view(`<div class="wrap"><div class="empty">${esc(e.message)}<p><button class="btn" data-act="reload" style="margin-top:1rem">ลองใหม่</button></p></div></div>`); return; }
   renderGroup();
-  G.poll = setInterval(async () => { const was = G.vote.open; await loadVote(false); if (G.tab === 'vote' ? !G.vote.dirty : was !== G.vote.open) renderGroup(true); }, 20000);
+  G.poll = setInterval(async () => { const was = G.vote.open; await loadVote(false); if (G.tab === 'map'){ if (was !== G.vote.open) setTabs(GTABS, G.tab, 'data-tab', {vote: G.vote.open ? '<span class="live">เปิดอยู่</span>' : ''}); } else if (G.tab === 'vote' ? !G.vote.dirty : was !== G.vote.open) renderGroup(true); }, 20000);
 }
 async function loadVote(reset){
   try {
@@ -201,14 +201,19 @@ function voteHtml(){
     <div class="vctl"><button class="icon-btn neutral" data-vm aria-label="ลดคะแนน" ${m < 1 || !V.open ? 'disabled' : ''}>${ico('minus')}</button><span class="num">${m}</span><button class="icon-btn neutral" data-vp aria-label="เพิ่มคะแนน" ${left < 1 || !V.open ? 'disabled' : ''}>${ico('plus')}</button></div></div>`; }).join('')}</div>
   <div style="margin-top:1.25rem"><button class="btn pri" data-act="vsubmit" ${V.open ? '' : 'disabled'}>${ico('check')}ส่งคะแนน</button>${V.dirty ? ' <span class="muted small">ยังไม่ได้ส่งคะแนน</span>' : ''}</div>`;
 }
-const GTABS = [['fill','กรอกข้อมูลกลุ่มงาน'],['peer','มุมมองกลุ่มงานอื่น'],['vote','ลงคะแนนประเด็น']];
+const GTABS = [['map','แผนที่ยุทธศาสตร์'],['fill','กรอกข้อมูลกลุ่มงาน'],['peer','มุมมองกลุ่มงานอื่น'],['vote','ลงคะแนนประเด็น']];
+function mountMap(){
+  const h = $('#smbHost'); if (!h || !window.SMB) return;
+  SMB.mount(h, {rpc, pass: () => (session && session.pass) || '', canEdit: !!session && session.role === 'admin'});
+}
 function renderGroup(keepFocus){
   if (keepFocus && document.activeElement && /TEXTAREA|SELECT|INPUT/.test(document.activeElement.tagName) && G.tab === 'fill') return;
   setTabs(GTABS, G.tab, 'data-tab', {vote: G.vote.open ? '<span class="live">เปิดอยู่</span>' : ''});
   view(`<div class="wrap">
     <h2>${esc(session.wg)}</h2>
     <p class="sub">ผู้กรอก: ${esc(session.author)}</p>
-    <div id="pane">${G.tab === 'fill' ? fillHtml() : G.tab === 'peer' ? peerView() : voteHtml()}</div>${navBtns(GTABS, G.tab, 'data-tab')}</div>${G.tab === 'fill' ? barHtml() : ''}`);
+    <div id="pane">${G.tab === 'map' ? '<div id="smbHost"></div>' : G.tab === 'fill' ? fillHtml() : G.tab === 'peer' ? peerView() : voteHtml()}</div>${G.tab === 'map' ? '' : navBtns(GTABS, G.tab, 'data-tab')}</div>${G.tab === 'fill' ? barHtml() : ''}`);
+  if (G.tab === 'map') mountMap();
   grow();
 }
 function grow(){ $$('textarea.ta').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); }
@@ -304,16 +309,16 @@ function peerView(){
 }
 
 /* ---------- ทีมยุทธศาสตร์ ---------- */
-const ATABS = [['over','ภาพรวมการส่ง'],['all','ข้อมูลทั้งหมด'],['group','จัดกลุ่มประเด็น'],['vote','โหวตและจัดลำดับ'],['exp','ส่งออกและพิมพ์']];
+const ATABS = [['map','แผนที่ยุทธศาสตร์'],['over','ภาพรวมการส่ง'],['all','ข้อมูลทั้งหมด'],['group','จัดกลุ่มประเด็น'],['vote','โหวตและจัดลำดับ'],['exp','ส่งออกและพิมพ์']];
 async function enterAdmin(){
-  A = {d: null, tab: 'over', f: {wg: '', kind: '', q: '', cl: ''}, sel: new Set(), pk: new Set(['ISSUE','IDEA']), onlyFree: true, newName: '', at: null};
+  A = {d: null, tab: 'map', f: {wg: '', kind: '', q: '', cl: ''}, sel: new Set(), pk: new Set(['ISSUE','IDEA']), onlyFree: true, newName: '', at: null};
   shell(whoHtml()); view('<p class="loadmsg">กำลังโหลดข้อมูลภาพรวม…</p>');
   if (!await loadAdmin()) return;
   renderAdmin();
   A.poll = setInterval(async () => {
     const act = document.activeElement;
     if (act && /TEXTAREA|SELECT|INPUT/.test(act.tagName)) return;
-    if (await loadAdmin(true)) renderAdmin();
+    if (await loadAdmin(true)){ if (A.tab === 'map') setTabs(ATABS, A.tab, 'data-atab', {vote: A.d.settings.voting_open === '1' ? '<span class="live">เปิดอยู่</span>' : ''}); else renderAdmin(); }
   }, 15000);
 }
 async function loadAdmin(quiet){
@@ -453,12 +458,13 @@ function expView(){
     <div class="card"><div><b>สรุปสำหรับพิมพ์</b><p class="muted small">อันดับประเด็น พร้อม SWOT ประเด็น และข้อเสนอ</p></div><button class="btn" data-exp="print">${ico('print')}พิมพ์ / บันทึกเป็น PDF</button></div></div>`;
 }
 function renderAdmin(){
-  const body = {over: overView, all: allView, group: groupTabView, vote: voteTabView, exp: expView}[A.tab]();
+  const body = A.tab === 'map' ? '<div id="smbHost"></div>' : {over: overView, all: allView, group: groupTabView, vote: voteTabView, exp: expView}[A.tab]();
   const open = A.d.settings.voting_open === '1';
   setTabs(ATABS, A.tab, 'data-atab', {vote: open ? '<span class="live">เปิดอยู่</span>' : ''});
   view(`<div class="wrap"><h2>ภาพรวมของทีมยุทธศาสตร์</h2>
     <div class="live-row"><span class="pulse ${open ? '' : 'off'}"></span><span>ข้อมูลอัปเดตอัตโนมัติ · ล่าสุด ${A.at.toLocaleTimeString('th-TH')}</span><button class="btn sm" data-act="refresh">${ico('refresh')}รีเฟรช</button></div>
-    <div id="pane">${body}</div>${navBtns(ATABS, A.tab, 'data-atab')}</div>`);
+    <div id="pane">${body}</div>${A.tab === 'map' ? '' : navBtns(ATABS, A.tab, 'data-atab')}</div>`);
+  if (A.tab === 'map') mountMap();
   $$('textarea.cnote').forEach(t => { t.style.height = 'auto'; t.style.height = Math.max(36, t.scrollHeight) + 'px'; });
 }
 async function aCall(fn, body, okMsg){
