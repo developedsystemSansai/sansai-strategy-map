@@ -1,6 +1,6 @@
 'use strict';
 const CFG = window.APP_CONFIG || {};
-const KIND = {DATA:'ข้อมูล', S:'จุดแข็ง', W:'จุดอ่อน', O:'โอกาส', T:'ภัยคุกคาม', ISSUE:'ประเด็นสำคัญ', IDEA:'ข้อเสนอ'};
+const KIND = {DATA:'ข้อมูล', S:'จุดแข็ง', W:'จุดอ่อน', O:'โอกาส', T:'อุปสรรค', ISSUE:'ประเด็นสำคัญ', IDEA:'ข้อเสนอ'};
 const KORDER = ['S','W','O','T','ISSUE','IDEA','DATA'];
 const PRI = {3:'สำคัญมาก', 2:'สำคัญ', 1:'พิจารณา'};
 const $ = (s, r = document) => r.querySelector(s);
@@ -17,6 +17,7 @@ const store = {
 let session = null;
 try { session = JSON.parse(store.get('sx_session') || 'null'); } catch(e){}
 let G = null, A = null, kseq = 0, loginErr = '', loginMode = 'group', draft = {wg: '', au: ''};
+const viewSw = (cur, attr) => `<span class="seg" role="group" aria-label="รูปแบบการแสดงผล">${[['graph','แผนผังกราฟ'],['list','รายการ']].map(([v, t]) => `<button type="button" class="${cur === v ? 'on' : ''}" ${attr}="${v}" aria-pressed="${cur === v}">${t}</button>`).join('')}</span>`;
 const thSort = (a, b) => a.localeCompare(b, 'th');
 
 let pend = 0;
@@ -163,23 +164,23 @@ async function onLogin1(e){
 
 /* ---------- กลุ่มงาน: กรอกข้อมูล ---------- */
 const PANELS = [
-  {id:'p-data', title:'สถานการณ์และตัวชี้วัดของกลุ่มงาน', hint:'ตัวเลขหรือข้อเท็จจริงที่กลุ่มงานติดตามอยู่ และช่วยให้เห็นภาพ เช่น ภาระงาน เวลารอคอย อัตรากำลัง ผลลัพธ์ที่เคยวัดไว้',
-   blocks:[{k:'DATA', ph:'ข้อมูลหรือตัวชี้วัด เช่น ผู้ป่วยนอกเฉลี่ยต่อวัน', ph2:'ค่าปัจจุบัน แนวโน้ม และแหล่งข้อมูล', detail:true}]},
   {id:'p-swot', title:'SWOT จากมุมมองกลุ่มงาน', hint:'เขียนข้อละหนึ่งเรื่อง สั้นและเจาะจงที่หน้างาน ไม่ต้องรอให้ครบทุกช่อง',
    blocks:[
     {k:'S', q:'กลุ่มงานทำอะไรได้ดี หรือมีอะไรที่เป็นแต้มต่อ', ph:'จุดแข็ง'},
     {k:'W', q:'อะไรทำให้งานติดขัด ซ้ำซ้อน หรือเสี่ยง', ph:'จุดอ่อน'},
     {k:'O', q:'นโยบาย ภาคีเครือข่าย เทคโนโลยี หรือความต้องการของประชาชนที่ใช้ประโยชน์ได้', ph:'โอกาส'},
-    {k:'T', q:'แรงกดดันจากภายนอกที่กลุ่มงานควบคุมเองไม่ได้', ph:'ภัยคุกคาม'}]},
+    {k:'T', q:'อุปสรรคหรือแรงกดดันจากภายนอกที่กลุ่มงานควบคุมเองไม่ได้', ph:'อุปสรรค'}]},
   {id:'p-issue', title:'ประเด็นสำคัญและข้อเสนอ', hint:'ใช้ระดับความสำคัญเพื่อบอกทีมยุทธศาสตร์ว่าเรื่องไหนควรดูก่อน',
    blocks:[
     {k:'ISSUE', q:'เรื่องที่ควรแก้หรือเร่งทำมากที่สุดในมุมของกลุ่มงาน', ph:'ประเด็นสำคัญ', ph2:'ส่งผลต่อประชาชนหรือบริการอย่างไร', detail:true, pri:true},
-    {k:'IDEA', q:'ถ้าเลือกทำได้เพียงไม่กี่เรื่อง กลุ่มงานเสนอให้ทำอะไร', ph:'ข้อเสนอ', ph2:'ทำอย่างไร ใครเกี่ยวข้อง', detail:true, pri:true}]}
+    {k:'IDEA', q:'ถ้าเลือกทำได้เพียงไม่กี่เรื่อง กลุ่มงานเสนอให้ทำอะไร', ph:'ข้อเสนอ', ph2:'ทำอย่างไร ใครเกี่ยวข้อง', detail:true, pri:true}]},
+  {id:'p-data', title:'สถานการณ์และตัวชี้วัดของกลุ่มงาน', hint:'ตัวเลขหรือข้อเท็จจริงที่กลุ่มงานติดตามอยู่ และช่วยให้เห็นภาพ เช่น ภาระงาน เวลารอคอย อัตรากำลัง ผลลัพธ์ที่เคยวัดไว้',
+   blocks:[{k:'DATA', ph:'ข้อมูลหรือตัวชี้วัด เช่น ผู้ป่วยนอกเฉลี่ยต่อวัน', ph2:'ค่าปัจจุบัน แนวโน้ม และแหล่งข้อมูล', detail:true}]}
 ];
 const BLOCK = {}; PANELS.forEach(p => p.blocks.forEach(b => BLOCK[b.k] = b));
 
 async function enterGroup(){
-  G = {entries: [], done: false, at: null, tab: 'map', peer: {loaded: false, entries: [], clusters: [], done: [], at: null, f: {wg: '', kind: '', q: ''}}, vote: {open: false, dots: 5, clusters: [], mine: {}, dirty: false}};
+  G = {entries: [], done: false, at: null, tab: 'fill', peer: {loaded: false, view: 'graph', entries: [], clusters: [], done: [], at: null, f: {wg: '', kind: '', q: ''}}, vote: {open: false, dots: 5, clusters: [], mine: {}, dirty: false}};
   shell(whoHtml()); view(loading('กำลังโหลดข้อมูลของกลุ่มงาน…'));
   try {
     const r = await rpc('sx_my_entries', {p_pass: session.pass, p_wg: session.wg});
@@ -213,15 +214,15 @@ function itemHtml(e){
 }
 function blockHtml(b){
   const list = G.entries.filter(e => e.kind === b.k);
-  return `<div class="block${'SWOT'.includes(b.k) ? ' ' + b.k : ''}" data-block="${b.k}">
-    <div class="block-h"><span class="pill ${b.k}">${KIND[b.k]}</span><span class="count">${list.filter(e => e.body.trim()).length} รายการ</span></div>
+  return `<div class="block ${b.k}" data-block="${b.k}">
+    <div class="block-h"><span class="pill big ${b.k}">${b.k.length === 1 ? `<b class="ltr">${b.k}</b>` : ''}${KIND[b.k]}</span><span class="count">${list.filter(e => e.body.trim()).length} รายการ</span></div>
     ${b.q ? `<p class="block-q">${esc(b.q)}</p>` : ''}
     <div class="items">${list.map(itemHtml).join('')}</div>
     <button class="btn sm" data-add="${b.k}">${ico('plus')}เพิ่ม${KIND[b.k]}</button></div>`;
 }
 function fillHtml(){
   return `<div class="hint"><b>ยังไม่ต้องเขียนวิสัยทัศน์ พันธกิจ หรือผลลัพธ์สุขภาพ</b> ทีมยุทธศาสตร์จะทบทวนเรื่องเหล่านั้นใหม่หลังรวบรวมข้อมูลจากทุกกลุ่มงาน</div>` + PANELS.map(p => `<section class="section" id="${p.id}"><h2>${p.title}</h2><p class="sub">${esc(p.hint)}</p>
-    <div class="blocks ${p.blocks.length === 2 && p.blocks[0].k !== 'DATA' ? 'two' : ''}">${p.blocks.map(blockHtml).join('')}</div></section>`).join('');
+    <div class="blocks ${p.blocks.length >= 2 ? 'two' : ''} ${p.id === 'p-swot' ? 'swot' : ''}">${p.blocks.map(blockHtml).join('')}</div></section>`).join('');
 }
 function barHtml(){
   const n = G.entries.filter(e => e.body.trim()).length, pend = G.entries.filter(e => e._st === 'dirty' || e._st === 'saving' || e._st === 'err').length;
@@ -243,10 +244,18 @@ function voteHtml(){
     <div class="vctl"><button class="icon-btn neutral" data-vm aria-label="ลดคะแนน" ${m < 1 || !V.open ? 'disabled' : ''}>${ico('minus')}</button><span class="num">${m}</span><button class="icon-btn neutral" data-vp aria-label="เพิ่มคะแนน" ${left < 1 || !V.open ? 'disabled' : ''}>${ico('plus')}</button></div></div>`; }).join('')}</div>
   <div style="margin-top:1.25rem"><button class="btn pri" data-act="vsubmit" ${V.open ? '' : 'disabled'}>${ico('check')}ส่งคะแนน</button>${V.dirty ? ' <span class="muted small">ยังไม่ได้ส่งคะแนน</span>' : ''}</div>`;
 }
-const GTABS = [['map','แผนที่ยุทธศาสตร์'],['fill','กรอกข้อมูลกลุ่มงาน'],['peer','มุมมองกลุ่มงานอื่น'],['vote','ลงคะแนนประเด็น']];
+const GTABS = [['fill','กรอกข้อมูลกลุ่มงาน'],['map','แผนที่ยุทธศาสตร์'],['peer','มุมมองกลุ่มงานอื่น'],['vote','ลงคะแนนประเด็น']];
 function mountMap(){
   const h = $('#smbHost'); if (!h || !window.SMB) return;
   SMB.mount(h, {rpc, pass: () => (session && session.pass) || '', canEdit: !!session && session.role === 'admin'});
+}
+function mountGraph(who){
+  const host = $('#gHost'); if (!host) return;
+  if (!window.SXG){ host.innerHTML = '<div class="empty">โหลดโมดูลกราฟไม่สำเร็จ ลองสลับไปมุมมองรายการ</div>'; return; }
+  try {
+    if (who === 'peer') SXG.mount(host, {entries: peerList(), clusters: G.peer.clusters, done: new Set(G.peer.done.map(x => x.wg)), own: session.wg});
+    else SXG.mount(host, {entries: filteredEntries(), clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: ''});
+  } catch(e){ host.innerHTML = '<div class="empty">แสดงกราฟไม่ได้: ' + esc(e.message) + '</div>'; }
 }
 function renderGroup(keepFocus){
   if (keepFocus && document.activeElement && /TEXTAREA|SELECT|INPUT/.test(document.activeElement.tagName) && G.tab === 'fill') return;
@@ -256,6 +265,7 @@ function renderGroup(keepFocus){
     <p class="sub">ผู้กรอก: ${esc(session.author)}</p>
     <div id="pane">${G.tab === 'map' ? '<div id="smbHost"></div>' : G.tab === 'fill' ? fillHtml() : G.tab === 'peer' ? peerView() : voteHtml()}</div>${G.tab === 'map' ? '' : navBtns(GTABS, G.tab, 'data-tab')}</div>${G.tab === 'fill' ? barHtml() : ''}`);
   if (G.tab === 'map') mountMap();
+  if (G.tab === 'peer' && G.peer.loaded && G.peer.view !== 'list') mountGraph('peer');
   grow();
 }
 function grow(){ $$('textarea.ta').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); }
@@ -293,6 +303,7 @@ async function setDone(v){
 function groupClick(t){
   const tab = t.closest('[data-tab]'); if (tab){ G.tab = tab.dataset.tab; if (G.tab === 'vote') loadVote(false).then(() => renderGroup()); else if (G.tab === 'peer'){ renderGroup(); loadPeer(); } else renderGroup(); return; }
   if (t.closest('[data-prefresh]')){ loadPeer(true); return; }
+  const pv = t.closest('[data-pview]'); if (pv){ G.peer.view = pv.dataset.pview; renderGroup(); return; }
   const add = t.closest('[data-add]');
   if (add){ const e = {_k: ++kseq, kind: add.dataset.add, body: '', detail: '', priority: 2, _st: 'new'}; G.entries.push(e); renderGroup(); const el = $(`.item[data-k="${e._k}"] .f-body`); if (el) el.focus(); return; }
   const del = t.closest('[data-del]');
@@ -330,31 +341,36 @@ async function loadPeer(manual){
     if (G.tab === 'peer') renderGroup(); if (manual) toast('อัปเดตแล้ว');
   } catch(e){ if (e.auth) return logout('เชื่อมต่อไม่สำเร็จ กรุณาเข้าใหม่อีกครั้ง'); toast(e.message); }
 }
+function peerList(){
+  const P = G.peer, f = P.f, q = f.q.trim().toLowerCase();
+  return P.entries.filter(e => (!f.wg || e.wg === f.wg) && (!f.kind || e.kind === f.kind) && (!q || ((e.body || '') + ' ' + (e.detail || '')).toLowerCase().includes(q)));
+}
 function peerView(){
   const P = G.peer; if (!P.loaded) return loading('กำลังโหลดมุมมองของกลุ่มงานอื่น…');
   const f = P.f, q = f.q.trim().toLowerCase(), doneSet = new Set(P.done.map(x => x.wg));
   const cn = id => (P.clusters.find(c => c.id === id) || {}).name || '';
   const byWg = {}; P.entries.forEach(e => (byWg[e.wg] = byWg[e.wg] || []).push(e));
   const wgs = Object.keys(byWg).sort(thSort);
-  const list = P.entries.filter(e => (!f.wg || e.wg === f.wg) && (!f.kind || e.kind === f.kind) && (!q || (e.body + ' ' + e.detail).toLowerCase().includes(q)));
+  const list = peerList();
   const li = e => `<div class="li"><p>${esc(e.body)}</p>${e.detail ? `<p class="muted small">${esc(e.detail)}</p>` : ''}<div class="meta"><span>${esc(short(e.wg))}</span>${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}${e.wg === session.wg ? '<span class="chip own">กลุ่มของท่าน</span>' : ''}${e.cluster_id && cn(e.cluster_id) ? `<span class="chip">${esc(cn(e.cluster_id))}</span>` : ''}</div></div>`;
   const of = k => list.filter(e => e.kind === k).sort((a, b) => b.priority - a.priority);
-  const card = k => `<div class="card"><h3><span class="pill ${k}">${KIND[k]}</span><span class="count">${of(k).length}</span></h3>${of(k).map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`;
+  const card = k => `<div class="card ${k}"><h3><span class="pill ${k}">${KIND[k]}</span><span class="count">${of(k).length}</span></h3>${of(k).map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`;
   return `<div class="sum"><div><b>${wgs.length}</b><span>กลุ่มงานที่เริ่มกรอกแล้ว</span></div><div><b>${P.done.length}</b><span>กลุ่มงานที่ส่งแล้ว</span></div><div><b>${P.entries.length}</b><span>รายการทั้งหมด</span></div></div>
   <div class="filters">
     <select class="select" data-pf="wg" aria-label="กรองตามกลุ่มงาน"><option value="">ทุกกลุ่มงาน</option>${wgs.map(g => `<option value="${esc(g)}"${f.wg === g ? ' selected' : ''}>${esc(g)} (${byWg[g].length}${doneSet.has(g) ? ' · ส่งแล้ว' : ''})</option>`).join('')}</select>
     <select class="select" data-pf="kind" aria-label="กรองตามประเภท"><option value="">ทุกประเภท</option>${KORDER.map(k => `<option value="${k}"${f.kind === k ? ' selected' : ''}>${KIND[k]}</option>`).join('')}</select>
     <input class="input" data-pf="q" type="search" placeholder="ค้นหาคำ" value="${esc(f.q)}" aria-label="ค้นหา">
-    <span class="muted small">${list.length} รายการ</span><button class="btn sm" data-prefresh>${ico('refresh')}อัปเดต</button></div>
+    <span class="muted small">${list.length} รายการ</span>${viewSw(P.view, 'data-pview')}<button class="btn sm" data-prefresh>${ico('refresh')}อัปเดต</button></div>
   ${!P.entries.length ? '<div class="empty">ยังไม่มีกลุ่มงานใดกรอกข้อมูล เมื่อมีคนกรอก จะแสดงที่นี่</div>' :
-    f.kind ? `<div class="card">${of(f.kind).map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>` :
-    `<div class="quad">${['S','W','O','T'].map(card).join('')}</div><div class="quad">${['ISSUE','IDEA'].map(card).join('')}</div><div class="card" style="margin-bottom:1.5rem"><h3><span class="pill DATA">${KIND.DATA}</span><span class="count">${of('DATA').length}</span></h3>${of('DATA').map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`}`;
+    P.view !== 'list' ? '<div id="gHost" class="ghost"></div>' :
+    f.kind ? `<div class="card ${f.kind}">${of(f.kind).map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>` :
+    `<div class="quad">${['S','W','O','T'].map(card).join('')}</div><div class="quad">${['ISSUE','IDEA'].map(card).join('')}</div><div class="card DATA" style="margin-bottom:1.5rem"><h3><span class="pill DATA">${KIND.DATA}</span><span class="count">${of('DATA').length}</span></h3>${of('DATA').map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`}`;
 }
 
 /* ---------- ทีมยุทธศาสตร์ ---------- */
 const ATABS = [['map','แผนที่ยุทธศาสตร์'],['over','ภาพรวมการส่ง'],['all','ข้อมูลทั้งหมด'],['group','จัดกลุ่มประเด็น'],['vote','โหวตและจัดลำดับ'],['exp','ส่งออกและพิมพ์']];
 async function enterAdmin(){
-  A = {d: null, tab: 'map', f: {wg: '', kind: '', q: '', cl: ''}, sel: new Set(), pk: new Set(['ISSUE','IDEA']), onlyFree: true, newName: '', at: null};
+  A = {d: null, tab: 'map', view: 'graph', f: {wg: '', kind: '', q: '', cl: ''}, sel: new Set(), pk: new Set(['ISSUE','IDEA']), onlyFree: true, newName: '', at: null};
   shell(whoHtml()); view(loading('กำลังโหลดข้อมูลภาพรวม…'));
   if (!await loadAdmin()) return;
   renderAdmin();
@@ -424,16 +440,16 @@ function filteredEntries(){
 function allView(){
   const list = filteredEntries();
   const byKind = k => list.filter(e => e.kind === k).sort((a, b) => b.priority - a.priority);
-  const card = k => `<div class="card"><h3><span class="pill ${k}">${KIND[k]}</span><span class="count muted small" style="margin-left:auto">${byKind(k).length}</span></h3>${byKind(k).map(e => entryLi(e)).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`;
+  const card = k => `<div class="card ${k}"><h3><span class="pill ${k}">${KIND[k]}</span><span class="count muted small" style="margin-left:auto">${byKind(k).length}</span></h3>${byKind(k).map(e => entryLi(e)).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`;
   const groups = allGroups().sort((a, b) => a.localeCompare(b, 'th'));
   return `<div class="filters">
     <select class="select" data-f="wg" aria-label="กรองตามกลุ่มงาน"><option value="">ทุกกลุ่มงาน</option>${groups.map(g => `<option value="${esc(g)}"${A.f.wg === g ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
     <select class="select" data-f="kind" aria-label="กรองตามประเภท"><option value="">ทุกประเภท</option>${KORDER.map(k => `<option value="${k}"${A.f.kind === k ? ' selected' : ''}>${KIND[k]}</option>`).join('')}</select>
     <select class="select" data-f="cl" aria-label="กรองตามประเด็น"><option value="">ทุกประเด็น</option><option value="_none"${A.f.cl === '_none' ? ' selected' : ''}>ยังไม่จัดกลุ่ม</option>${A.d.clusters.map(c => `<option value="${esc(c.id)}"${A.f.cl === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
     <input class="input" data-f="q" type="search" placeholder="ค้นหาคำ" value="${esc(A.f.q)}" aria-label="ค้นหา">
-    <span class="muted small">${list.length} รายการ</span></div>
-  ${A.f.kind ? `<div class="card">${byKind(A.f.kind).map(e => entryLi(e)).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>` :
-   `<div class="quad">${['S','W','O','T'].map(card).join('')}</div><div class="quad">${['ISSUE','IDEA'].map(card).join('')}</div><div class="card" style="margin-bottom:1.5rem"><h3><span class="pill DATA">${KIND.DATA}</span></h3>${byKind('DATA').map(e => entryLi(e, false)).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`}`;
+    <span class="muted small">${list.length} รายการ</span>${viewSw(A.view, 'data-aview')}</div>
+  ${A.view !== 'list' ? '<div id="gHost" class="ghost"></div>' : A.f.kind ? `<div class="card ${A.f.kind}">${byKind(A.f.kind).map(e => entryLi(e)).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>` :
+   `<div class="quad">${['S','W','O','T'].map(card).join('')}</div><div class="quad">${['ISSUE','IDEA'].map(card).join('')}</div><div class="card DATA" style="margin-bottom:1.5rem"><h3><span class="pill DATA">${KIND.DATA}</span></h3>${byKind('DATA').map(e => entryLi(e, false)).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`}`;
 }
 
 function groupTabView(){
@@ -509,6 +525,7 @@ function renderAdmin(){
     <div class="live-row"><span class="pulse ${open ? '' : 'off'}"></span><span>ข้อมูลอัปเดตอัตโนมัติ · ล่าสุด ${A.at.toLocaleTimeString('th-TH')}</span><button class="btn sm" data-act="refresh">${ico('refresh')}รีเฟรช</button></div>
     <div id="pane">${body}</div>${A.tab === 'map' ? '' : navBtns(ATABS, A.tab, 'data-atab')}</div>`);
   if (A.tab === 'map') mountMap();
+  if (A.tab === 'all' && A.view !== 'list') mountGraph('admin');
   $$('textarea.cnote').forEach(t => { t.style.height = 'auto'; t.style.height = Math.max(36, t.scrollHeight) + 'px'; });
 }
 async function aCall(fn, body, okMsg){
@@ -517,6 +534,7 @@ async function aCall(fn, body, okMsg){
 }
 function adminClick(t){
   const tab = t.closest('[data-atab]'); if (tab){ A.tab = tab.dataset.atab; return renderAdmin(); }
+  const av = t.closest('[data-aview]'); if (av){ A.view = av.dataset.aview; return renderAdmin(); }
   const pk = t.closest('[data-pk]'); if (pk){ const k = pk.dataset.pk; A.pk.has(k) ? A.pk.delete(k) : A.pk.add(k); return renderAdmin(); }
   if (t.closest('[data-free]')){ A.onlyFree = !A.onlyFree; return renderAdmin(); }
   if (t.closest('[data-selnone]')){ A.sel.clear(); return renderAdmin(); }
