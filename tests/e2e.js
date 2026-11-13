@@ -76,6 +76,18 @@ const ev = (code) => w.eval(code);
   const before2 = $('.gr-svg > g').getAttribute('transform'); click($('[data-g="in"]')); ok($('.gr-svg > g').getAttribute('transform') !== before2, 'ปุ่มขยายทำงาน');
   click($('[data-pview="list"]')); await sleep(100);
   ok(!$('#gHost') && $$('.card.T, .card.S').length >= 2 && $('.card.T .pill').textContent.trim() === 'อุปสรรค', 'สลับเป็นมุมมองรายการได้ และการ์ด "อุปสรรค" มีสีของตัวเอง');
+  // --- มุมมองรายการ: คลิกดูรายละเอียด + ไฮไลต์ ---
+  const li0 = $('.li[data-oe]'); ok(!!li0, 'รายการในมุมมองรายการคลิกดูรายละเอียดได้');
+  click(li0); await sleep(80);
+  ok($('#sxDrawer') && !$('#sxDrawer').hidden && $('#sxDrawer .gr-d-body').textContent === li0.querySelector('p').textContent, 'คลิกรายการ: แผงรายละเอียดเปิดและแสดงข้อความเต็ม');
+  ok($('#pane.hl-on') && $$('.li.hl').length >= 1 && $$('.li.hl').every(x => x.dataset.oe === li0.dataset.oe), 'รายการที่เลือกถูกไฮไลต์ที่เหลือจางลง');
+  ok(!$('#sxDrawer .gr-admin'), 'ผู้กรอกทั่วไปไม่เห็นส่วนจัดกลุ่ม');
+  const wgName = li0.dataset.wg; click($('#sxDrawer [data-og]')); await sleep(80);
+  ok($$('.li.hl').length === $$('.li[data-wg]').filter(x => x.dataset.wg === wgName).length && $$('.li.hl').length >= 1 && /รายการ ·/.test($('#sxDrawer').textContent), 'คลิกกลุ่มงาน: ไฮไลต์ทุกรายการของกลุ่มงานนั้นและแผงแสดงสรุป');
+  click($('[data-dclose]')); await sleep(20); ok($('#sxDrawer').hidden && !$('#pane.hl-on'), 'ปุ่มปิดแผงทำงานและล้างไฮไลต์');
+  const cchip = $('.li .chip[data-oc]');
+  if (cchip){ click(cchip); await sleep(80); ok(/ประกอบด้วยการวิเคราะห์/.test($('#sxDrawer').textContent) && $$('#sxDrawer [data-og]').length >= 1 && $$('.li.hl').length >= 1, 'คลิกประเด็น: แผงแสดงกลุ่มงานและชนิดการวิเคราะห์ พร้อมไฮไลต์'); }
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', {key: 'Escape', bubbles: true})); await sleep(20); ok($('#sxDrawer').hidden, 'กด Esc ปิดแผง');
   click($('[data-pview="graph"]')); await sleep(100);
   ok(!!$('#gHost .gr-svg'), 'สลับกลับเป็นกราฟได้');
   ok($('.tabs [data-tab="vote"]'), 'แท็บลงคะแนนยังอยู่');
@@ -95,6 +107,21 @@ const ev = (code) => w.eval(code);
   click($('[data-aview="list"]')); await sleep(100);
   ok(!$('#gHost') && $$('.li').length > 0, 'แอดมินสลับเป็นรายการได้');
   sel.value; const s2 = $('select[data-f="wg"]'); s2.value = ''; s2.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(100);
+  // --- ทีมยุทธศาสตร์จัดกลุ่มจากการ์ดรายละเอียดในมุมมองรายการ ---
+  const freeLi = $('.li[data-oe][data-cid=""]'); ok(!!freeLi, 'มีรายการที่ยังไม่จัดกลุ่มให้ทดสอบ');
+  if (freeLi){ const fid = freeLi.dataset.oe; click(freeLi); await sleep(80);
+    ok(!!$('#sxDrawer .gr-admin') && $$('#sxDrawer .gr-pick input').length >= 1, 'แอดมิน: แผงรายละเอียดมีส่วนจัดกลุ่มและรายการให้ติ๊ก');
+    const cid0 = ev("A.d.clusters[0].id"); $('#sxDrawer [data-target]').value = cid0; click($('#sxDrawer [data-act="assign"]')); await sleep(2500);
+    ok(ev("A.d.entries.find(e => String(e.id) === '" + fid + "').cluster_id") === cid0, 'แอดมิน: ย้ายรายการเข้าประเด็นจากแผงรายละเอียดได้');
+    ok(!$('#sxDrawer').hidden && $('#sxDrawer .gr-path .gr-chip.cl'), 'หลังย้าย แผงยังเปิดและแสดงประเด็นใหม่');
+    click($('#sxDrawer [data-dclose]')); await sleep(30); }
+  click($('[data-aview="graph"]')); await sleep(150);
+  const en = $('.gn.entry'); click(en); await sleep(60);
+  ok(!!$('.gr-detail .gr-admin') && /จัดกลุ่มประเด็น/.test($('.gr-detail').textContent), 'แอดมิน: การ์ดลอยบนกราฟมีส่วนจัดกลุ่ม');
+  const ent2 = $$('.gn.entry').find(n => !n.classList.contains('sel')); const fid2 = ev("A.d.entries.find(e => !e.cluster_id) && A.d.entries.find(e => !e.cluster_id).id");
+  if (fid2 != null){ click($('.gn.entry[data-nid="e:' + fid2 + '"]')); await sleep(60); $('.gr-detail [data-newname]').value = 'ประเด็นใหม่จากกราฟ'; click($('.gr-detail [data-act="create"]')); await sleep(3500);
+    ok(ev("A.d.entries.find(e => String(e.id) === '" + fid2 + "').cluster_id") != null && ev("A.d.clusters.some(c => c.name === 'ประเด็นใหม่จากกราฟ')"), 'แอดมิน: สร้างประเด็นใหม่และย้ายจากการ์ดบนกราฟได้');
+    ok(!!$('.gn.entry.sel') && !$('.gr-detail').hidden, 'หลังจัดกลุ่ม กราฟคงรายการที่เลือกและการ์ดไว้'); }
 
   // จัดกลุ่มประเด็น: สร้าง ย้าย ปลด ลบ
   click($('[data-atab="group"]')); await sleep(200);

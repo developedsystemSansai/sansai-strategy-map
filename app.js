@@ -19,6 +19,8 @@ try { session = JSON.parse(store.get('sx_session') || 'null'); } catch(e){}
 let G = null, A = null, kseq = 0, loginErr = '', loginMode = 'group', draft = {wg: '', au: ''};
 const viewSw = (cur, attr) => `<span class="seg" role="group" aria-label="รูปแบบการแสดงผล">${[['graph','แผนผังกราฟ'],['list','รายการ']].map(([v, t]) => `<button type="button" class="${cur === v ? 'on' : ''}" ${attr}="${v}" aria-pressed="${cur === v}">${t}</button>`).join('')}</span>`;
 const thSort = (a, b) => a.localeCompare(b, 'th');
+const eidOf = e => e.id != null ? String(e.id) : e.wg + '|' + e.body;
+const liAttr = e => `data-oe="${esc(eidOf(e))}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด"`;
 
 let pend = 0;
 function barState(){ const b = $('#topbar'); if (b) b.classList.toggle('on', pend > 0); }
@@ -249,12 +251,24 @@ function mountMap(){
   const h = $('#smbHost'); if (!h || !window.SMB) return;
   SMB.mount(h, {rpc, pass: () => (session && session.pass) || '', canEdit: !!session && session.role === 'admin'});
 }
+/* ทีมยุทธศาสตร์จัดกลุ่มประเด็นจากการ์ดรายละเอียด (ผังและรายการใช้ร่วมกัน) */
+const adminApi = () => ({
+  assign: (ids, cid) => aCall('sx_admin_assign', {p_ids: ids, p_cluster: cid}, cid ? 'ย้ายแล้ว ' + ids.length + ' รายการ' : 'เอาออกจากประเด็นแล้ว'),
+  create: (name, ids) => rpc('sx_admin_save_cluster', {p_pass: session.pass, p_cluster: {name}}).then(r => aCall('sx_admin_assign', {p_ids: ids, p_cluster: r.id}, 'สร้างประเด็นและย้ายแล้ว ' + ids.length + ' รายการ')).catch(e => toast(e.message))
+});
+/* บอกแผงรายละเอียดว่าตอนนี้หน้ารายการแสดงข้อมูลชุดไหนอยู่ (ถ้าไม่ได้อยู่หน้ารายการ จะไม่เปิดแผง) */
+if (window.SXD) SXD.setProvider(() => {
+  if (!session) return null;
+  if (session.role === 'admin' && A && A.d && A.tab === 'all' && A.view === 'list') return {entries: filteredEntries(), clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: '', admin: adminApi()};
+  if (session.role === 'group' && G && G.tab === 'peer' && G.peer.loaded && G.peer.view === 'list') return {entries: peerList(), clusters: G.peer.clusters, done: new Set(G.peer.done.map(x => x.wg)), own: session.wg, admin: null};
+  return null;
+});
 function mountGraph(who){
   const host = $('#gHost'); if (!host) return;
   if (!window.SXG){ host.innerHTML = '<div class="empty">โหลดโมดูลกราฟไม่สำเร็จ ลองสลับไปมุมมองรายการ</div>'; return; }
   try {
     if (who === 'peer') SXG.mount(host, {entries: peerList(), clusters: G.peer.clusters, done: new Set(G.peer.done.map(x => x.wg)), own: session.wg});
-    else SXG.mount(host, {entries: filteredEntries(), clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: ''});
+    else SXG.mount(host, {entries: filteredEntries(), clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: '', admin: adminApi()});
   } catch(e){ host.innerHTML = '<div class="empty">แสดงกราฟไม่ได้: ' + esc(e.message) + '</div>'; }
 }
 function renderGroup(keepFocus){
@@ -266,6 +280,7 @@ function renderGroup(keepFocus){
     <div id="pane">${G.tab === 'map' ? '<div id="smbHost"></div>' : G.tab === 'fill' ? fillHtml() : G.tab === 'peer' ? peerView() : voteHtml()}</div>${G.tab === 'map' ? '' : navBtns(GTABS, G.tab, 'data-tab')}</div>${G.tab === 'fill' ? barHtml() : ''}`);
   if (G.tab === 'map') mountMap();
   if (G.tab === 'peer' && G.peer.loaded && G.peer.view !== 'list') mountGraph('peer');
+  if (window.SXD) SXD.refresh();
   grow();
 }
 function grow(){ $$('textarea.ta').forEach(t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }); }
@@ -352,7 +367,7 @@ function peerView(){
   const byWg = {}; P.entries.forEach(e => (byWg[e.wg] = byWg[e.wg] || []).push(e));
   const wgs = Object.keys(byWg).sort(thSort);
   const list = peerList();
-  const li = e => `<div class="li"><p>${esc(e.body)}</p>${e.detail ? `<p class="muted small">${esc(e.detail)}</p>` : ''}<div class="meta"><span>${esc(short(e.wg))}</span>${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}${e.wg === session.wg ? '<span class="chip own">กลุ่มของท่าน</span>' : ''}${e.cluster_id && cn(e.cluster_id) ? `<span class="chip">${esc(cn(e.cluster_id))}</span>` : ''}</div></div>`;
+  const li = e => `<div class="li" ${liAttr(e)}><p>${esc(e.body)}</p>${e.detail ? `<p class="muted small">${esc(e.detail)}</p>` : ''}<div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}${e.wg === session.wg ? '<span class="chip own">กลุ่มของท่าน</span>' : ''}${e.cluster_id && cn(e.cluster_id) ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(cn(e.cluster_id))}</button>` : ''}</div></div>`;
   const of = k => list.filter(e => e.kind === k).sort((a, b) => b.priority - a.priority);
   const card = k => `<div class="card ${k}"><h3><span class="pill ${k}">${KIND[k]}</span><span class="count">${of(k).length}</span></h3>${of(k).map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`;
   return `<div class="sum"><div><b>${wgs.length}</b><span>กลุ่มงานที่เริ่มกรอกแล้ว</span></div><div><b>${P.done.length}</b><span>กลุ่มงานที่ส่งแล้ว</span></div><div><b>${P.entries.length}</b><span>รายการทั้งหมด</span></div></div>
@@ -409,9 +424,9 @@ function dotsHtml(n, color, cap = 40){
   return Array.from({length: k}, () => `<span class="dot" style="background:${color || 'var(--amber)'}"></span>`).join('') + (n > cap ? `<span class="muted small">+${n - cap}</span>` : '');
 }
 function entryLi(e, showCl = true){
-  return `<div class="li"><p>${esc(e.body)}</p>${e.detail ? `<p class="muted small">${esc(e.detail)}</p>` : ''}
-    <div class="meta"><span>${esc(short(e.wg))}</span>${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}
-    ${showCl && e.cluster_id ? `<span class="chip">${esc(clName(e.cluster_id))}</span>` : ''}</div></div>`;
+  return `<div class="li" ${liAttr(e)}><p>${esc(e.body)}</p>${e.detail ? `<p class="muted small">${esc(e.detail)}</p>` : ''}
+    <div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}
+    ${showCl && e.cluster_id ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(clName(e.cluster_id))}</button>` : ''}</div></div>`;
 }
 
 function overView(){
@@ -456,6 +471,10 @@ function groupTabView(){
   const d = A.d, st = clStats();
   const pool = d.entries.filter(e => A.pk.has(e.kind) && (!A.onlyFree || !e.cluster_id)).sort((a, b) => b.priority - a.priority || a.wg.localeCompare(b.wg, 'th'));
   const sel = [...A.sel].filter(id => d.entries.some(e => e.id === id));
+  if (A.simSort && sel.length && window.SXD){                       // เรียงให้รายการที่ถ้อยคำใกล้กับที่เลือกอยู่บนสุด (แม้ผู้กรอกใช้คำต่างกัน)
+    const picks = d.entries.filter(e => A.sel.has(e.id)), score = e => A.sel.has(e.id) ? 2 : Math.max(...picks.map(p => SXD.sim(p, e)));
+    const sc = new Map(pool.map(e => [e.id, score(e)])); pool.sort((x, y) => sc.get(y.id) - sc.get(x.id));
+  }
   const poolHtml = pool.map(e => `<label class="pitem"><input type="checkbox" data-sel="${esc(e.id)}"${A.sel.has(e.id) ? ' checked' : ''}><span class="b"><span><span class="pill ${e.kind}">${KIND[e.kind]}</span> ${esc(e.body)}</span>${e.detail ? `<span class="d">${esc(e.detail)}</span>` : ''}<span class="muted small">${esc(short(e.wg))}${['ISSUE','IDEA'].includes(e.kind) ? ' · ' + PRI[e.priority] : ''}${e.cluster_id ? ' · ' + esc(clName(e.cluster_id)) : ''}</span></span></label>`).join('');
   const clHtml = d.clusters.map(c => {
     const s = st[c.id], items = d.entries.filter(e => e.cluster_id === c.id);
@@ -467,7 +486,7 @@ function groupTabView(){
   }).join('');
   return `<div class="split">
     <section><div class="pane-h"><h2>รายการจากกลุ่มงาน</h2><span class="muted small">${pool.length} รายการ</span></div>
-      <div class="toggles" style="margin-bottom:.75rem">${KORDER.map(k => `<button class="tg" data-pk="${k}" aria-pressed="${A.pk.has(k)}">${KIND[k]}</button>`).join('')}<button class="tg" data-free aria-pressed="${A.onlyFree}">เฉพาะที่ยังไม่จัดกลุ่ม</button></div>
+      <div class="toggles" style="margin-bottom:.75rem">${KORDER.map(k => `<button class="tg" data-pk="${k}" aria-pressed="${A.pk.has(k)}">${KIND[k]}</button>`).join('')}<button class="tg" data-free aria-pressed="${A.onlyFree}">เฉพาะที่ยังไม่จัดกลุ่ม</button><button class="tg" data-simsort aria-pressed="${!!A.simSort}" title="เรียงรายการที่ถ้อยคำใกล้เคียงกับที่เลือกไว้ขึ้นก่อน">เรียงตามความคล้ายกับที่เลือก</button></div>
       <div class="card pool"><div class="act"><button class="btn sm" data-selall>เลือกทั้งหมดที่เห็น</button><button class="btn sm" data-selnone>ล้างที่เลือก</button><span class="muted small">เลือก ${sel.length}</span>
         <select class="select" data-target aria-label="ย้ายไปประเด็น"><option value="">ย้ายไปประเด็น…</option>${d.clusters.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select><button class="btn sm pri" data-move ${sel.length ? '' : 'disabled'}>ย้าย</button>
         <input class="input" data-newname placeholder="หรือตั้งชื่อประเด็นใหม่" value="${esc(A.newName)}" maxlength="200" aria-label="ชื่อประเด็นใหม่"><button class="btn sm pri" data-newcl ${sel.length ? '' : 'disabled'}>${ico('plus')}สร้างและย้าย</button></div>
@@ -526,6 +545,7 @@ function renderAdmin(){
     <div id="pane">${body}</div>${A.tab === 'map' ? '' : navBtns(ATABS, A.tab, 'data-atab')}</div>`);
   if (A.tab === 'map') mountMap();
   if (A.tab === 'all' && A.view !== 'list') mountGraph('admin');
+  if (window.SXD) SXD.refresh();
   $$('textarea.cnote').forEach(t => { t.style.height = 'auto'; t.style.height = Math.max(36, t.scrollHeight) + 'px'; });
 }
 async function aCall(fn, body, okMsg){
@@ -537,6 +557,7 @@ function adminClick(t){
   const av = t.closest('[data-aview]'); if (av){ A.view = av.dataset.aview; return renderAdmin(); }
   const pk = t.closest('[data-pk]'); if (pk){ const k = pk.dataset.pk; A.pk.has(k) ? A.pk.delete(k) : A.pk.add(k); return renderAdmin(); }
   if (t.closest('[data-free]')){ A.onlyFree = !A.onlyFree; return renderAdmin(); }
+  if (t.closest('[data-simsort]')){ A.simSort = !A.simSort; return renderAdmin(); }
   if (t.closest('[data-selnone]')){ A.sel.clear(); return renderAdmin(); }
   if (t.closest('[data-selall]')){ $$('[data-sel]').forEach(c => A.sel.add(c.dataset.sel)); return renderAdmin(); }
   if (t.closest('[data-move]')){ const to = $('[data-target]').value; if (!to) return toast('เลือกประเด็นปลายทางก่อน'); const ids = [...A.sel]; A.sel.clear(); return aCall('sx_admin_assign', {p_ids: ids, p_cluster: to}, 'ย้ายแล้ว ' + ids.length + ' รายการ'); }
@@ -564,7 +585,7 @@ function adminClick(t){
   if (act && act.dataset.act === 'refresh') loadAdmin(true).then(ok => ok && renderAdmin());
 }
 function adminChange(t){
-  if (t.dataset.sel){ t.checked ? A.sel.add(t.dataset.sel) : A.sel.delete(t.dataset.sel); const c = $('.act .muted'); if (c) c.textContent = 'เลือก ' + A.sel.size; $$('[data-move],[data-newcl]').forEach(b => b.disabled = !A.sel.size); return; }
+  if (t.dataset.sel){ t.checked ? A.sel.add(t.dataset.sel) : A.sel.delete(t.dataset.sel); if (A.simSort) return renderAdmin(); const c = $('.act .muted'); if (c) c.textContent = 'เลือก ' + A.sel.size; $$('[data-move],[data-newcl]').forEach(b => b.disabled = !A.sel.size); return; }
   if (t.dataset.f){ A.f[t.dataset.f] = t.value; return renderAdmin(); }
   const cl = t.closest('.cl');
   if (cl && (t.hasAttribute('data-cname') || t.hasAttribute('data-cnote'))){

@@ -5,6 +5,8 @@ Frontend เป็นไฟล์ static (Vercel) · Backend เป็น Google
 
 ```
 index.html   หน้าเว็บทั้งหมด (ไม่ต้อง build)
+detail.js    รายละเอียดรายการ/กลุ่มงาน/ประเด็นรวม (การ์ดลอยบนกราฟ + แผงข้างในมุมมองรายการ) และตัวช่วยจัดกลุ่มของทีมยุทธศาสตร์
+graph.js     กราฟเครือข่ายกลุ่มงาน (ซูม/เลื่อน/ไฮไลต์ รองรับ ~60 กลุ่มงาน)
 config.js    ตั้งค่า GAS_URL
 vercel.json  ตั้งค่า Vercel
 gas/Code.gs, gas/appsscript.json   โค้ด Backend
