@@ -123,6 +123,57 @@ const ev = (code) => w.eval(code);
     ok(ev("A.d.entries.find(e => String(e.id) === '" + fid2 + "').cluster_id") != null && ev("A.d.clusters.some(c => c.name === 'ประเด็นใหม่จากกราฟ')"), 'แอดมิน: สร้างประเด็นใหม่และย้ายจากการ์ดบนกราฟได้');
     ok(!!$('.gn.entry.sel') && !$('.gr-detail').hidden, 'หลังจัดกลุ่ม กราฟคงรายการที่เลือกและการ์ดไว้'); }
 
+  // ================= สำรวจ SWOT (ทีมยุทธศาสตร์) =================
+  ok(!tabs.some(t => /สำรวจ SWOT/.test(t)), 'ผู้กรอกทั่วไปไม่เห็นแท็บ "สำรวจ SWOT"');
+  const atabs = $$('.tabs [data-atab]').map(t => t.textContent.replace(/\s+/g, ' ').trim());
+  ok(atabs.some(t => /สำรวจ SWOT/.test(t)), 'ทีมยุทธศาสตร์เห็นแท็บ "สำรวจ SWOT"  [' + atabs.join(' | ') + ']');
+  click($('[data-atab="swot"]')); await sleep(300);
+  ok($$('.swx .card').length === 4 && ['S','W','O','T'].every(k => $('.swx .card.' + k)), 'ตาราง SWOT แสดงครบ 4 ช่อง S/W/O/T');
+  const cnt4 = k => ev("A.d.entries.filter(e => e.kind === '" + k + "').length");
+  ok(['S','W','O','T'].every(k => $$('.swx .card.' + k + ' .li').length === cnt4(k)), 'จำนวนรายการในแต่ละช่องตรงกับข้อมูล (S' + cnt4('S') + ' W' + cnt4('W') + ' O' + cnt4('O') + ' T' + cnt4('T') + ')');
+  ok(!$('.swx .card.ISSUE') && !$('.swx .card.IDEA') && !$('.swx .card.DATA'), 'ตาราง SWOT ไม่มีรายการประเด็น/ข้อเสนอ/ข้อมูลปน');
+  console.log('sim badges:', $$('.swx .chip.sim').length);
+  // กรองกลุ่มงาน / ค้นหา / เรียง
+  const sw1 = $('select[data-sf="wg"]'); sw1.value = 'เภสัชกรรม'; sw1.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(150);
+  const lis1 = $$('.swx .li'); ok(lis1.length > 0 && lis1.every(l => l.dataset.wg === 'เภสัชกรรม'), 'กรองกลุ่มงานในตาราง SWOT เหลือเฉพาะกลุ่มนั้น (' + lis1.length + ' รายการ)');
+  const sw2 = $('select[data-sf="wg"]'); sw2.value = ''; sw2.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(100);
+  const sq = $('[data-sf="q"]'); sq.value = 'zzzไม่มีคำนี้zzz'; sq.dispatchEvent(new w.Event('input', {bubbles: true})); await sleep(500);
+  ok($$('.swx .li').length === 0 && /ไม่มีรายการตามตัวกรอง/.test($('.swx').textContent), 'ค้นหาไม่พบ: แสดงข้อความว่าไม่มีรายการ');
+  const sq2 = $('[data-sf="q"]'); sq2.value = ''; sq2.dispatchEvent(new w.Event('input', {bubbles: true})); await sleep(500);
+  const so = $('select[data-sf="sort"]'); so.value = 'sim'; so.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(150);
+  ok($$('.swx .li').length === cnt4('S') + cnt4('W') + cnt4('O') + cnt4('T'), 'เรียงตามเรื่องที่หลายกลุ่มงานพูดตรงกัน: จำนวนรายการไม่เปลี่ยน');
+  const simCounts = $$('.swx .card.S .li').map(l => { const c = l.querySelector('.chip.sim'); return c ? +c.textContent.match(/\d+/)[0] : 0; });
+  ok(simCounts.every((v, i) => i === 0 || simCounts[i - 1] >= v), 'เรียงตามความใกล้เคียง: ช่องจุดแข็งไล่จากมากไปน้อย');
+  so.value = 'wg'; so.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(100);
+  // คลิกรายการ: แผงรายละเอียดเปิด + ไฮไลต์ + ทีมจัดกลุ่มได้
+  const sLi = $('.swx .card.S .li[data-cid=""]'), oLi = $('.swx .card.O .li[data-cid=""]');
+  ok(!!sLi && !!oLi, 'มี S และ O ที่ยังไม่จัดเข้าประเด็นให้ทดสอบ');
+  const sid = sLi.dataset.oe, oid = oLi.dataset.oe;
+  click(sLi); await sleep(80);
+  ok(!$('#sxDrawer').hidden && !!$('#sxDrawer .gr-admin') && $('#pane').classList.contains('hl-on') && sLi.classList.contains('hl'), 'คลิกรายการในตาราง SWOT: แผงเปิด มีส่วนจัดกลุ่ม และไฮไลต์รายการ');
+  const tc = ev("A.d.clusters[0].id"); $('#sxDrawer [data-target]').value = tc; click($('#sxDrawer [data-act="assign"]')); await sleep(2500);
+  ok(ev("A.d.entries.find(e => String(e.id) === '" + sid + "').cluster_id") === tc && !!$('.swx .li[data-oe="' + sid + '"] .chip[data-oc]'), 'จัด S เข้าประเด็นจากตาราง SWOT ได้ และตารางแสดงชื่อประเด็นที่รายการ');
+  click($('#sxDrawer [data-dclose]')); await sleep(30);
+  const oLi2 = $('.swx .li[data-oe="' + oid + '"]'); click(oLi2); await sleep(80);
+  $('#sxDrawer [data-target]').value = tc; click($('#sxDrawer [data-act="assign"]')); await sleep(2500);
+  click($('#sxDrawer [data-dclose]')); await sleep(30);
+  // มุมมอง TOWS ตามประเด็น
+  click($('[data-smode="tows"]')); await sleep(150);
+  ok(!!$('.swx-t table') && $$('.swx-t th').length === 9, 'มุมมอง TOWS มีตารางประเด็น × S/W/O/T × SO/WO/ST/WT');
+  const trow = $$('.swx-t tbody tr').find(r => r.querySelector('[data-swx="' + tc + '"]'));
+  ok(!!trow && trow.querySelectorAll('.stg.on').length >= 1 && /S \d+ · O \d+/.test(trow.textContent), 'ประเด็นที่มีทั้ง S และ O ขึ้นช่อง SO พร้อมจับคู่  [' + (trow ? trow.textContent.replace(/\s+/g, ' ').trim().slice(0, 120) : '') + ']');
+  ok(/ขาด/.test($('.swx-t').textContent), 'ช่องที่ยังขาดด้านใดด้านหนึ่งบอกว่า "ขาด …"');
+  click($('[data-swx="' + tc + '"]')); await sleep(100);
+  ok($('[data-swx="' + tc + '"]').getAttribute('aria-expanded') === 'true' && $$('.swx-open .card').length === 4 && !!$('.swx-open [data-oc="' + tc + '"]'), 'คลิกประเด็นแล้วขยายดู S/W/O/T ในประเด็นนั้น');
+  click($('.swx-open .li')); await sleep(80); ok(!$('#sxDrawer').hidden, 'คลิกรายการในแถวที่ขยาย เปิดแผงรายละเอียด');
+  click($('#sxDrawer [data-dclose]')); await sleep(30);
+  click($('[data-smode="matrix"]')); await sleep(100);
+  // CSV
+  const rowsCsv = ev("SXS.csvRows(A.d.entries, A.d.clusters, A.sw)");
+  ok(rowsCsv.length === 1 + cnt4('S') + cnt4('W') + cnt4('O') + cnt4('T') && rowsCsv[0][0] === 'ปัจจัย' && rowsCsv.slice(1).every(r => (r[1] === 'จุดแข็ง' || r[1] === 'จุดอ่อน') === (r[0] === 'ภายใน')), 'CSV ของ SWOT: จำนวนแถวครบ และแยกภายใน/ภายนอกถูกต้อง');
+  click($('[data-atab="exp"]')); await sleep(150); ok(!!$('[data-exp="swot"]'), 'หน้าส่งออกมีปุ่ม CSV ของ SWOT');
+  click($('[data-atab="all"]')); await sleep(100);
+
   // จัดกลุ่มประเด็น: สร้าง ย้าย ปลด ลบ
   click($('[data-atab="group"]')); await sleep(200);
   const nBefore = ev("A.d.clusters.length");

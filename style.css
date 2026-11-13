@@ -490,3 +490,26 @@ dialog::backdrop{animation:fadeIn .2s ease both}
   #splash{animation:none}
 }
 @media print{#splash,#topbar,.demobar{display:none!important}}
+
+/* ===== สำรวจ SWOT (ทีมยุทธศาสตร์) ===== */
+.swx-note{margin:-4px 0 12px}
+.swx{display:grid;grid-template-columns:8.5rem minmax(0,1fr) minmax(0,1fr);gap:10px 14px;margin-bottom:16px;align-items:stretch}
+.swx .card{margin:0;display:flex;flex-direction:column;min-height:0}
+.swx-h{align-self:end;font-size:13.5px;font-weight:600;color:var(--muted);padding:0 4px 2px}
+.swx-r{align-self:center;font-weight:600;line-height:1.35}
+.swx-r small{display:block;font-weight:400;font-size:12.5px;color:var(--muted)}
+.swx-list{overflow:auto;max-height:min(24rem,50vh);padding-right:6px;margin-right:-6px}
+.chip.sim{background:var(--amber-l);border-color:#ecd39a;color:var(--amber-ink)}
+.swx-t table{min-width:880px}
+.swx-t th{white-space:normal;vertical-align:bottom}
+.swx-t th small{display:block;font-weight:400;font-size:11.5px;line-height:1.3;opacity:.85}
+.swx-t td.n{font-weight:700}.swx-t td.n.zero{font-weight:400;color:var(--muted)}
+.stg{display:inline-block;font-size:12.5px;padding:1px 9px;border-radius:99px;color:var(--muted);white-space:nowrap}
+.stg.on{background:var(--pri-t);color:var(--pri-d);font-weight:600}
+.swx-tg{display:inline-flex;gap:8px;align-items:flex-start;border:0;background:none;padding:2px 6px;margin-left:-6px;border-radius:6px;cursor:pointer;text-align:left;font-weight:600;line-height:1.4}
+.swx-tg:hover{background:var(--pri-t)}
+.swx-tg .ic{margin-top:.2em}
+.swx-open>td{background:#f7faf9;padding:12px}
+.swx-x .quad{margin:8px 0 0}
+.swx-x .card{padding:12px}
+@media (max-width:860px){.swx{grid-template-columns:1fr}.swx-c,.swx-h{display:none}.swx-r{margin-top:6px}}

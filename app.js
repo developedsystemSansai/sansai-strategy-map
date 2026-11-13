@@ -259,6 +259,7 @@ const adminApi = () => ({
 /* บอกแผงรายละเอียดว่าตอนนี้หน้ารายการแสดงข้อมูลชุดไหนอยู่ (ถ้าไม่ได้อยู่หน้ารายการ จะไม่เปิดแผง) */
 if (window.SXD) SXD.setProvider(() => {
   if (!session) return null;
+  if (session.role === 'admin' && A && A.d && A.tab === 'swot') return {entries: A.d.entries, clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: '', admin: adminApi()};
   if (session.role === 'admin' && A && A.d && A.tab === 'all' && A.view === 'list') return {entries: filteredEntries(), clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: '', admin: adminApi()};
   if (session.role === 'group' && G && G.tab === 'peer' && G.peer.loaded && G.peer.view === 'list') return {entries: peerList(), clusters: G.peer.clusters, done: new Set(G.peer.done.map(x => x.wg)), own: session.wg, admin: null};
   return null;
@@ -383,9 +384,9 @@ function peerView(){
 }
 
 /* ---------- ทีมยุทธศาสตร์ ---------- */
-const ATABS = [['map','แผนที่ยุทธศาสตร์'],['over','ภาพรวมการส่ง'],['all','ข้อมูลทั้งหมด'],['group','จัดกลุ่มประเด็น'],['vote','โหวตและจัดลำดับ'],['exp','ส่งออกและพิมพ์']];
+const ATABS = [['map','แผนที่ยุทธศาสตร์'],['over','ภาพรวมการส่ง'],['all','ข้อมูลทั้งหมด'],['swot','สำรวจ SWOT'],['group','จัดกลุ่มประเด็น'],['vote','โหวตและจัดลำดับ'],['exp','ส่งออกและพิมพ์']];
 async function enterAdmin(){
-  A = {d: null, tab: 'map', view: 'graph', f: {wg: '', kind: '', q: '', cl: ''}, sel: new Set(), pk: new Set(['ISSUE','IDEA']), onlyFree: true, newName: '', at: null};
+  A = {d: null, tab: 'map', view: 'graph', f: {wg: '', kind: '', q: '', cl: ''}, sw: {mode: 'matrix', wg: '', cl: '', q: '', sort: 'wg', open: new Set()}, sel: new Set(), pk: new Set(['ISSUE','IDEA']), onlyFree: true, newName: '', at: null};
   shell(whoHtml()); view(loading('กำลังโหลดข้อมูลภาพรวม…'));
   if (!await loadAdmin()) return;
   renderAdmin();
@@ -467,6 +468,11 @@ function allView(){
    `<div class="quad">${['S','W','O','T'].map(card).join('')}</div><div class="quad">${['ISSUE','IDEA'].map(card).join('')}</div><div class="card DATA" style="margin-bottom:1.5rem"><h3><span class="pill DATA">${KIND.DATA}</span></h3>${byKind('DATA').map(e => entryLi(e, false)).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`}`;
 }
 
+function swotView(){
+  if (!window.SXS) return '<div class="empty">โหลดโมดูลสำรวจ SWOT ไม่สำเร็จ ลองรีเฟรชหน้า</div>';
+  return SXS.html({all: A.d.entries, clusters: A.d.clusters, groups: allGroups(), st: A.sw});
+}
+
 function groupTabView(){
   const d = A.d, st = clStats();
   const pool = d.entries.filter(e => A.pk.has(e.kind) && (!A.onlyFree || !e.cluster_id)).sort((a, b) => b.priority - a.priority || a.wg.localeCompare(b.wg, 'th'));
@@ -534,10 +540,11 @@ function printSummary(){
 function expView(){
   return `<div class="exp"><div class="card"><div><b>รายการทั้งหมดจากทุกกลุ่มงาน</b><p class="muted small">ไฟล์ CSV เปิดด้วย Excel ได้ ภาษาไทยไม่เพี้ยน</p></div><button class="btn pri" data-exp="entries">${ico('download')}ดาวน์โหลด CSV</button></div>
     <div class="card"><div><b>ลำดับประเด็นและคะแนนโหวต</b><p class="muted small">ใช้ต่อในการสังเคราะห์วิสัยทัศน์ พันธกิจ และผลลัพธ์สุขภาพ</p></div><button class="btn pri" data-exp="rank">${ico('download')}ดาวน์โหลด CSV</button></div>
+    <div class="card"><div><b>SWOT จากทุกกลุ่มงาน</b><p class="muted small">แยกภายใน/ภายนอก พร้อมจำนวนกลุ่มงานอื่นที่พูดใกล้เคียงกัน ใช้ต่อในตาราง TOWS</p></div><button class="btn pri" data-exp="swot">${ico('download')}ดาวน์โหลด CSV</button></div>
     <div class="card"><div><b>สรุปสำหรับพิมพ์</b><p class="muted small">อันดับประเด็น พร้อม SWOT ประเด็น และข้อเสนอ</p></div><button class="btn" data-exp="print">${ico('print')}พิมพ์ / บันทึกเป็น PDF</button></div></div>`;
 }
 function renderAdmin(){
-  const body = A.tab === 'map' ? '<div id="smbHost"></div>' : {over: overView, all: allView, group: groupTabView, vote: voteTabView, exp: expView}[A.tab]();
+  const body = A.tab === 'map' ? '<div id="smbHost"></div>' : {over: overView, all: allView, swot: swotView, group: groupTabView, vote: voteTabView, exp: expView}[A.tab]();
   const open = A.d.settings.voting_open === '1';
   setTabs(ATABS, A.tab, 'data-atab', {vote: open ? '<span class="live">เปิดอยู่</span>' : ''});
   view(`<div class="wrap"><h2>ภาพรวมของทีมยุทธศาสตร์</h2>
@@ -555,6 +562,9 @@ async function aCall(fn, body, okMsg){
 function adminClick(t){
   const tab = t.closest('[data-atab]'); if (tab){ A.tab = tab.dataset.atab; return renderAdmin(); }
   const av = t.closest('[data-aview]'); if (av){ A.view = av.dataset.aview; return renderAdmin(); }
+  const sm = t.closest('[data-smode]'); if (sm){ A.sw.mode = sm.dataset.smode; return renderAdmin(); }
+  const sx = t.closest('[data-swx]'); if (sx){ const id = sx.dataset.swx; A.sw.open.has(id) ? A.sw.open.delete(id) : A.sw.open.add(id); return renderAdmin(); }
+  if (t.closest('[data-swcsv]')){ if (window.SXS) download(`sx-swot-${new Date().toISOString().slice(0, 10)}.csv`, toCSV(SXS.csvRows(A.d.entries, A.d.clusters, A.sw)), 'text/csv;charset=utf-8'); return; }
   const pk = t.closest('[data-pk]'); if (pk){ const k = pk.dataset.pk; A.pk.has(k) ? A.pk.delete(k) : A.pk.add(k); return renderAdmin(); }
   if (t.closest('[data-free]')){ A.onlyFree = !A.onlyFree; return renderAdmin(); }
   if (t.closest('[data-simsort]')){ A.simSort = !A.simSort; return renderAdmin(); }
@@ -580,6 +590,7 @@ function adminClick(t){
   if (ex){ const k = ex.dataset.exp, day = new Date().toISOString().slice(0, 10);
     if (k === 'entries') download(`sx-entries-${day}.csv`, csvEntries(), 'text/csv;charset=utf-8');
     else if (k === 'rank') download(`sx-ranking-${day}.csv`, csvRank(), 'text/csv;charset=utf-8');
+    else if (k === 'swot' && window.SXS) download(`sx-swot-${day}.csv`, toCSV(SXS.csvRows(A.d.entries, A.d.clusters, {mode: 'matrix', wg: '', cl: '', q: '', sort: 'wg'})), 'text/csv;charset=utf-8');
     else printSummary(); return; }
   const act = t.closest('[data-act]');
   if (act && act.dataset.act === 'refresh') loadAdmin(true).then(ok => ok && renderAdmin());
@@ -587,6 +598,7 @@ function adminClick(t){
 function adminChange(t){
   if (t.dataset.sel){ t.checked ? A.sel.add(t.dataset.sel) : A.sel.delete(t.dataset.sel); if (A.simSort) return renderAdmin(); const c = $('.act .muted'); if (c) c.textContent = 'เลือก ' + A.sel.size; $$('[data-move],[data-newcl]').forEach(b => b.disabled = !A.sel.size); return; }
   if (t.dataset.f){ A.f[t.dataset.f] = t.value; return renderAdmin(); }
+  if (t.dataset.sf && t.dataset.sf !== 'q'){ A.sw[t.dataset.sf] = t.value; return renderAdmin(); }
   const cl = t.closest('.cl');
   if (cl && (t.hasAttribute('data-cname') || t.hasAttribute('data-cnote'))){
     const c = A.d.clusters.find(x => x.id === cl.dataset.cid); if (!c) return;
@@ -618,6 +630,7 @@ document.addEventListener('input', e => {
     if (t.dataset.pf === 'q'){ clearTimeout(qT); const v = t.value; qT = setTimeout(() => { G.peer.f.q = v; renderGroup(); const x = $('[data-pf=q]'); if (x){ x.focus(); x.setSelectionRange(v.length, v.length); } }, 300); return; }
     groupInput(t); }
   else if (A && t.matches('[data-newname]')) A.newName = t.value;
+  else if (A && t.dataset.sf === 'q'){ clearTimeout(qT); const v = t.value; qT = setTimeout(() => { A.sw.q = v; renderAdmin(); const q = $('[data-sf=q]'); if (q){ q.focus(); q.setSelectionRange(v.length, v.length); } }, 300); }
   else if (A && t.dataset.f === 'q'){ clearTimeout(qT); const v = t.value; qT = setTimeout(() => { A.f.q = v; renderAdmin(); const q = $('[data-f=q]'); if (q){ q.focus(); q.setSelectionRange(v.length, v.length); } }, 300); }
 });
 document.addEventListener('change', e => {
