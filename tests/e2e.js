@@ -86,7 +86,7 @@ const ev = (code) => w.eval(code);
   console.log('admin tabs:', $$('.tabs [data-atab]').map(t => t.textContent.trim()).join(' | '));
   click($('[data-atab="all"]')); await sleep(300);
   ok(!!$('#gHost .gr-svg') && $$('.gn.hub').length >= 10, 'แอดมิน: หน้า "ข้อมูลทั้งหมด" แสดงกราฟ');
-  ok($$('.gn.cluster').length >= 1 && $$('.gr-edge.soft').length >= 1, 'กราฟของแอดมินแสดงประเด็นรวม (โหนดเพชร + เส้นประ)');
+  ok($$('.gn.cluster').length >= 1 && $$('.gr-edge.cl').length >= 1, 'กราฟของแอดมินแสดงประเด็นรวม (โหนดเพชร + เส้นประ)');
   const cEl = $('.gn.cluster'); click(cEl); await sleep(50);
   ok(/รายการ จาก/.test($('.gr-detail').textContent), 'คลิกประเด็นรวมแล้วเห็นจำนวนรายการ/กลุ่มงาน');
   // กรองด้วยกลุ่มงาน
