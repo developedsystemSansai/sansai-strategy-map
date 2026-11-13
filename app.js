@@ -19,7 +19,14 @@ try { session = JSON.parse(store.get('sx_session') || 'null'); } catch(e){}
 let G = null, A = null, kseq = 0, loginErr = '', loginMode = 'group', draft = {wg: '', au: ''};
 const thSort = (a, b) => a.localeCompare(b, 'th');
 
+let pend = 0;
+function barState(){ const b = $('#topbar'); if (b) b.classList.toggle('on', pend > 0); }
 async function rpc(fn, body){
+  pend++; barState();
+  try { return await rpc0(fn, body); } finally { pend--; barState(); }
+}
+async function rpc0(fn, body){
+  if (session && session.demo && window.DEMO) return DEMO.rpc(fn, body);      // โหมดตัวอย่าง: ไม่แตะฐานข้อมูลจริง
   if (!CFG.SUPABASE_URL || !CFG.SUPABASE_KEY) throw new Error('ยังไม่ได้ตั้งค่า SUPABASE_URL และ SUPABASE_KEY ใน config.js');
   let r;
   try {
@@ -46,8 +53,9 @@ const hue = i => `hsl(${(i * 47 + 12) % 360} 48% 40%)`;
 const sumVals = o => Object.values(o).reduce((a, b) => a + b, 0);
 
 function shell(who){
+  const demo = session && session.demo ? `<div class="demobar" role="note"><span class="demo-tag">โหมดตัวอย่าง</span><span>ข้อมูลสมมติทั้งหมด ลองกรอก แก้ไข หรือโหวตได้เต็มที่ — <b>ไม่บันทึกลงฐานข้อมูลจริง</b></span><span class="sp"></span><button class="btn sm" data-act="demoreset">${ico('refresh')}รีเซ็ตตัวอย่าง</button><button class="btn sm" data-act="logout">ออกจากโหมดตัวอย่าง</button></div>` : '';
   $('#app').innerHTML = `<div class="sticky"><header class="top">
-    <div class="brand"><span class="brand-mark">${ico('cross')}</span><div>แผนยุทธศาสตร์ โรงพยาบาลสันทราย<small>รวบรวมมุมมองจากกลุ่มงาน · อ.สันทราย จ.เชียงใหม่</small></div></div>${who || ''}</header>
+    <div class="brand"><span class="brand-logo"><img src="assets/emblem.png" alt="" width="32" height="32"></span><div>แผนยุทธศาสตร์ โรงพยาบาลสันทราย<small>รวบรวมมุมมองจากกลุ่มงาน · อ.สันทราย จ.เชียงใหม่</small></div></div>${who || ''}</header>${demo}
     <nav class="tabs" id="tabs" role="tablist" hidden></nav></div><main id="view"></main>`;
 }
 function setTabs(list, cur, attr, extra){
@@ -58,13 +66,41 @@ function navBtns(list, cur, attr){
   const i = list.findIndex(x => x[0] === cur), p = list[i - 1], n = list[i + 1];
   return `<div class="navbtns">${p ? `<button class="btn" ${attr}="${p[0]}">← ${p[1]}</button>` : '<span></span>'}${n ? `<button class="btn pri" ${attr}="${n[0]}">${n[1]} →</button>` : ''}</div>`;
 }
-const view = h => { $('#view').innerHTML = h; };
+let animNext = true;
+const loading = m => `<div class="loadmsg"><span class="spin" aria-hidden="true"></span><p>${m}</p></div>`;
+const view = h => {
+  $('#view').innerHTML = h;
+  if (animNext && h.indexOf('class="loadmsg"') < 0){ animNext = false; enhance($('#view')); }
+};
+const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function countUp(el){
+  const m = /^(\d+)(.*)$/.exec(el.textContent.trim()); if (!m || REDUCED) return;
+  const to = +m[1], tail = m[2], t0 = performance.now(), dur = 700;
+  if (to === 0) return;
+  (function step(t){ const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(to * e) + tail; if (k < 1) requestAnimationFrame(step); })(t0);
+}
+function enhance(root){
+  if (!root) return;
+  const w = root.firstElementChild; if (w && w.classList.contains('wrap')) w.classList.add('rise');
+  root.querySelectorAll('.logo-card, .steps li, .sum > div, .hint, .filters, .ctl, .live-row, .section, .card, .vcard, .rrow, .cl, .tw, .empty, .panel')
+    .forEach((el, i) => { el.style.setProperty('--i', Math.min(i, 14)); el.classList.add('rise'); });
+  root.querySelectorAll('.sum b').forEach(countUp);
+}
 function logout(msg){
   if (G) clearInterval(G.poll); if (A) clearInterval(A.poll);
   session = null; G = null; A = null; loginMode = 'group'; loginErr = msg || '';
+  if (window.SMB && SMB.reset) SMB.reset();
   store.del('sx_session'); boot();
 }
-function saveSession(){ store.set('sx_session', JSON.stringify(session)); }
+function saveSession(){ if (session && session.demo) return; store.set('sx_session', JSON.stringify(session)); }
+function startDemo(role){
+  if (!window.DEMO) return toast('ไม่พบข้อมูลตัวอย่าง');
+  if (window.SMB && SMB.reset) SMB.reset();
+  DEMO.reset(role);
+  session = role === 'admin' ? {demo: true, pass: 'demo', role: 'admin'} : {demo: true, pass: 'demo', role: 'group', wg: DEMO.user.wg, author: DEMO.user.author};
+  boot();
+}
 function whoHtml(){
   const t = session.role === 'admin' ? `<span class="t"><b>ทีมยุทธศาสตร์</b></span>` : `<span class="t"><b>${esc(short(session.wg))}</b> · ${esc(session.author)}</span>`;
   return `<span class="who">${t}</span><button class="btn sm" data-act="logout">${ico('out')}ออก</button>`;
@@ -91,6 +127,7 @@ function loginView(){
     </form>`;
   view(`<div class="login">
     <div>
+      <div class="logo-card"><img src="assets/logo.png" alt="โรงพยาบาลสันทราย กลุ่มงานยุทธศาสตร์และแผนงานโครงการ" width="900" height="475"></div>
       <h1>เขียนมุมมองของกลุ่มงาน เพื่อเลือกยุทธศาสตร์ของโรงพยาบาลร่วมกัน</h1>
       <p class="lead muted">ทุกกลุ่มงานกรอกข้อมูลในมุมของตัวเอง แล้วทีมยุทธศาสตร์จะนำมารวมกันดูภาพรวมในการประชุมเชิงปฏิบัติการ</p>
       <ol class="steps">
@@ -100,8 +137,13 @@ function loginView(){
         <li><span class="n">4</span><div><b>ส่งให้ทีมยุทธศาสตร์</b><p class="muted small">ระบบบันทึกให้ทุกครั้งที่พิมพ์ และแก้ไขได้จนกว่าจะประชุม</p></div></li>
       </ol>
     </div>
-    <div class="panel"><h2 style="margin-bottom:1rem">${isG ? 'เข้าใช้งานกลุ่มงาน' : 'เข้าสู่ระบบทีมยุทธศาสตร์'}</h2>${form}
+    <div class="side"><div class="panel"><h2 style="margin-bottom:1rem">${isG ? 'เข้าใช้งานกลุ่มงาน' : 'เข้าสู่ระบบทีมยุทธศาสตร์'}</h2>${form}
       <p class="small" style="margin-top:1rem"><button class="linkbtn" data-lmode="${isG ? 'admin' : 'group'}">${isG ? 'สำหรับทีมยุทธศาสตร์ เข้าที่นี่' : '← กลับไปเลือกกลุ่มงาน'}</button></p></div>
+      <div class="panel demo-card"><h3>ลองดูตัวอย่างก่อน</h3><p class="muted small">ใช้ข้อมูลสมมติ ไม่ต้องเข้าสู่ระบบ และไม่บันทึกลงฐานข้อมูลจริง</p>
+        <div class="demo-btns">
+          <button type="button" class="btn" data-demo="group">${ico('check')}<span><b>ตัวอย่างผู้กรอก</b><small>ดูหน้ากรอกข้อมูล มุมมองกลุ่มงานอื่น และการลงคะแนน</small></span></button>
+          <button type="button" class="btn" data-demo="admin">${ico('refresh')}<span><b>ตัวอย่างทีมยุทธศาสตร์</b><small>ดูภาพรวมเมื่อทุกกลุ่มงานกรอกเสร็จ จัดกลุ่มประเด็น และผลโหวต</small></span></button>
+        </div></div></div>
   </div>`);
 }
 function readDraft(){ const w = $('#wg'); if (!w) return; draft.wg = w.value === '__other' ? ($('#wgt').value || '').trim() : w.value; draft.au = $('#au').value; }
@@ -114,7 +156,7 @@ async function onLogin1(e){
     loginErr = ''; session = {pass: '', role: 'group', wg, author: au}; saveSession(); boot(); return;
   }
   const pw = $('#pw').value.trim(); if (!pw) return;
-  $('#f1 button').disabled = true;
+  $('#f1 button').disabled = true; $('#f1 button').classList.add('busy');
   try { await rpc('sx_login', {p_pass: pw}); loginErr = ''; session = {pass: pw, role: 'admin'}; saveSession(); boot(); }
   catch(err){ loginErr = err.auth ? 'รหัสผ่านทีมยุทธศาสตร์ไม่ถูกต้อง' : err.message; loginView(); }
 }
@@ -138,7 +180,7 @@ const BLOCK = {}; PANELS.forEach(p => p.blocks.forEach(b => BLOCK[b.k] = b));
 
 async function enterGroup(){
   G = {entries: [], done: false, at: null, tab: 'map', peer: {loaded: false, entries: [], clusters: [], done: [], at: null, f: {wg: '', kind: '', q: ''}}, vote: {open: false, dots: 5, clusters: [], mine: {}, dirty: false}};
-  shell(whoHtml()); view('<p class="loadmsg">กำลังโหลดข้อมูลของกลุ่มงาน…</p>');
+  shell(whoHtml()); view(loading('กำลังโหลดข้อมูลของกลุ่มงาน…'));
   try {
     const r = await rpc('sx_my_entries', {p_pass: session.pass, p_wg: session.wg});
     G.entries = (r.entries || []).map(e => ({...e, _k: ++kseq, _st: 'ok'}));
@@ -266,6 +308,7 @@ function groupClick(t){
     V.dirty = true; renderGroup(); return; }
   const act = t.closest('[data-act]'); if (!act) return;
   const a = act.dataset.act;
+  if (a === 'done' || a === 'undone' || a === 'vsubmit') act.classList.add('busy');
   if (a === 'done') setDone(true); else if (a === 'undone') setDone(false);
   else if (a === 'vsubmit'){
     const mine = {}; Object.entries(G.vote.mine).forEach(([k, v]) => { if (v > 0) mine[k] = v; });
@@ -288,7 +331,7 @@ async function loadPeer(manual){
   } catch(e){ if (e.auth) return logout('เชื่อมต่อไม่สำเร็จ กรุณาเข้าใหม่อีกครั้ง'); toast(e.message); }
 }
 function peerView(){
-  const P = G.peer; if (!P.loaded) return '<p class="loadmsg">กำลังโหลดมุมมองของกลุ่มงานอื่น…</p>';
+  const P = G.peer; if (!P.loaded) return loading('กำลังโหลดมุมมองของกลุ่มงานอื่น…');
   const f = P.f, q = f.q.trim().toLowerCase(), doneSet = new Set(P.done.map(x => x.wg));
   const cn = id => (P.clusters.find(c => c.id === id) || {}).name || '';
   const byWg = {}; P.entries.forEach(e => (byWg[e.wg] = byWg[e.wg] || []).push(e));
@@ -312,7 +355,7 @@ function peerView(){
 const ATABS = [['map','แผนที่ยุทธศาสตร์'],['over','ภาพรวมการส่ง'],['all','ข้อมูลทั้งหมด'],['group','จัดกลุ่มประเด็น'],['vote','โหวตและจัดลำดับ'],['exp','ส่งออกและพิมพ์']];
 async function enterAdmin(){
   A = {d: null, tab: 'map', f: {wg: '', kind: '', q: '', cl: ''}, sel: new Set(), pk: new Set(['ISSUE','IDEA']), onlyFree: true, newName: '', at: null};
-  shell(whoHtml()); view('<p class="loadmsg">กำลังโหลดข้อมูลภาพรวม…</p>');
+  shell(whoHtml()); view(loading('กำลังโหลดข้อมูลภาพรวม…'));
   if (!await loadAdmin()) return;
   renderAdmin();
   A.poll = setInterval(async () => {
@@ -331,6 +374,7 @@ async function loadAdmin(quiet){
 }
 const clName = id => { const c = A.d.clusters.find(x => x.id === id); return c ? c.name : ''; };
 function allGroups(){
+  if (session && session.demo && window.DEMO) return DEMO.groups();
   const s = new Set([...(CFG.WORK_GROUPS || []), ...A.d.entries.map(e => e.wg), ...A.d.submissions.map(x => x.wg)]);
   return [...s];
 }
@@ -445,7 +489,7 @@ function csvRank(){
 function printSummary(){
   const d = A.d, rk = rankList(), subs = d.submissions.filter(s => s.done).length;
   const sec = k => { const l = d.entries.filter(e => e.kind === k); return l.length ? `<h2>${KIND[k]} (${l.length})</h2><ul>${l.map(e => `<li>${esc(e.body)} <small>(${esc(short(e.wg))})</small></li>`).join('')}</ul>` : ''; };
-  $('#printArea').innerHTML = `<h1>สรุปมุมมองกลุ่มงาน · แผนยุทธศาสตร์ โรงพยาบาลสันทราย</h1>
+  $('#printArea').innerHTML = `<img src="assets/logo.png" alt="" style="height:64px;margin-bottom:8px"><h1>สรุปมุมมองกลุ่มงาน · แผนยุทธศาสตร์ โรงพยาบาลสันทราย</h1>
     <p>พิมพ์เมื่อ ${fmt(new Date().toISOString())} · ส่งแล้ว ${subs} กลุ่มงาน · ${d.entries.length} รายการ · ผู้ลงคะแนน ${d.voters_total} คน</p>
     <h2>ลำดับประเด็นตามคะแนนโหวต</h2>${rk.length ? `<table><thead><tr><th>#</th><th>ประเด็น</th><th class="n">คะแนน</th><th class="n">ผู้โหวต</th><th class="n">รายการ</th><th class="n">กลุ่มงาน</th></tr></thead><tbody>
     ${rk.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.c.name)}</td><td class="n">${r.s.total}</td><td class="n">${r.s.voters}</td><td class="n">${r.s.items}</td><td class="n">${r.s.groups.size}</td></tr>`).join('')}</tbody></table>` : '<p>ยังไม่มีประเด็น</p>'}
@@ -519,7 +563,10 @@ let qT;
 document.addEventListener('click', e => {
   const t = e.target; if (!(t instanceof Element)) return;
   const lm = t.closest('[data-lmode]'); if (lm){ readDraft(); loginMode = lm.dataset.lmode; loginErr = ''; return loginView(); }
+  const dm = t.closest('[data-demo]'); if (dm) return startDemo(dm.dataset.demo);
+  if (t.closest('[data-tab],[data-atab]')) animNext = true;
   const a = t.closest('[data-act]');
+  if (a && a.dataset.act === 'demoreset'){ if (session && session.demo){ if (window.SMB && SMB.reset) SMB.reset(); DEMO.reset(session.role); animNext = true; toast('รีเซ็ตข้อมูลตัวอย่างแล้ว'); boot(); } return; }
   if (a && a.dataset.act === 'logout') return logout();
   if (a && a.dataset.act === 'reload') return boot();
   if (session && session.role === 'admin' && A) adminClick(t); else if (session && G) groupClick(t);
@@ -541,7 +588,15 @@ document.addEventListener('change', e => {
   if (A) adminChange(t);
 });
 function boot(){
+  animNext = true;
+  if (G) clearInterval(G.poll); if (A) clearInterval(A.poll);
   if (!session){ loginView(); return; }
   if (session.role === 'admin') enterAdmin(); else enterGroup();
 }
+const T0 = performance.now();
+function hideSplash(){
+  const sp = $('#splash'); if (!sp) return;
+  setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 600); }, Math.max(0, 1150 - (performance.now() - T0)));
+}
 boot();
+hideSplash();

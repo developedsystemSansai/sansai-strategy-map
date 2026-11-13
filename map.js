@@ -920,5 +920,6 @@ function mount(root, opts){
   if (!ready){ render(); firstLoad(); }
   else { setDirty(dirty); renderMapSel(); render(); }
 }
-window.SMB = {mount, isDirty: () => dirty};
+window.SMB = {mount, isDirty: () => dirty, example: () => example(),
+  reset(){ ready = false; lastRO = null; S = blank(); dirty = false; step = 1; maps = []; E = null; linkSrc = null; }};
 })();
