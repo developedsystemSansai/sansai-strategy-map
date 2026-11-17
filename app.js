@@ -113,6 +113,41 @@ function whoHtml(){
 }
 
 /* ---------- เข้าสู่ระบบ: เลือกกลุ่มงานก่อนเสมอ ---------- */
+/* ---------- สถิติความคืบหน้า (หน้าล็อกอิน) ---------- */
+let prog = null, progErr = '', progAt = 0, progBusy = false;
+async function loadProgress(){
+  if (progBusy) return; progBusy = true;
+  try { const r = await rpc('sx_public_progress', {}); prog = (r && r.groups) || []; progAt = Date.now(); progErr = ''; }
+  catch(e){ progErr = e.message || 'โหลดสถิติไม่ได้'; }
+  progBusy = false;
+  const el = $('#prog'); if (el && !session) el.innerHTML = progHtml();
+}
+function progHtml(){
+  const head = `<div class="prog-h"><h2>ความคืบหน้าของกลุ่มงาน</h2><button type="button" class="btn sm" data-progreload>${ico('refresh')}รีเฟรช</button></div>`;
+  if (prog === null) return head + `<p class="muted small">${progErr ? esc(progErr) : 'กำลังโหลดสถิติ…'}</p>`;
+  const names = [...(CFG.WORK_GROUPS || [])], map = new Map(prog.map(g => [g.wg, g]));
+  const all = [...names, ...prog.filter(g => !names.includes(g.wg)).map(g => g.wg)];
+  const done = [], work = [], none = [];
+  all.forEach(n => { const g = map.get(n); if (g && g.done) done.push([n, g]); else if (g && g.items > 0) work.push([n, g]); else none.push([n, g]); });
+  const byName = (a, b) => thSort(a[0], b[0]); [done, work, none].forEach(l => l.sort(byName));
+  const N = all.length || 1, pc = x => (x / N * 100).toFixed(1);
+  const chip = ([n, g], c) => `<li class="pchip ${c}" title="${esc(n)}${g && g.last ? ' · ล่าสุด ' + fmt(g.last) : ''}">${c === 'd' ? ico('check') : ''}${esc(short(n))}${c === 'w' ? ` <small>${g.items} รายการ</small>` : ''}</li>`;
+  const started = done.length + work.length;
+  return head + `
+    <div class="pstats">
+      <div class="pstat d"><b>${done.length}</b><span>ส่งแล้ว</span></div>
+      <div class="pstat w"><b>${work.length}</b><span>กำลังกรอก</span></div>
+      <div class="pstat"><b>${none.length}</b><span>ยังไม่เริ่ม</span></div>
+      <div class="pstat"><b>${N}</b><span>กลุ่มงานทั้งหมด</span></div>
+    </div>
+    <div class="pbar" role="img" aria-label="ส่งแล้ว ${done.length} กลุ่ม กำลังกรอก ${work.length} กลุ่ม ยังไม่เริ่ม ${none.length} กลุ่ม จากทั้งหมด ${N} กลุ่ม"><i class="d" style="width:${pc(done.length)}%"></i><i class="w" style="width:${pc(work.length)}%"></i></div>
+    ${started ? `
+      ${done.length ? `<div class="pgroup-h">ส่งให้ทีมยุทธศาสตร์แล้ว (${done.length})</div><ul class="plist">${done.map(x => chip(x, 'd')).join('')}</ul>` : ''}
+      ${work.length ? `<div class="pgroup-h">กำลังกรอก (${work.length})</div><ul class="plist">${work.map(x => chip(x, 'w')).join('')}</ul>` : ''}`
+      : `<div class="pempty">${mas('point', 72)}<p>ยังไม่มีกลุ่มงานใดเริ่มกรอก ท่านเป็นกลุ่มแรกได้เลย</p></div>`}
+    ${none.length ? `<details class="pnone"><summary>ยังไม่เริ่ม (${none.length}) แตะเพื่อดูรายชื่อ</summary><ul class="plist" style="margin-top:8px">${none.map(x => chip(x, 'n')).join('')}</ul></details>` : ''}
+    <p class="muted small pfoot">${progAt ? 'อัปเดตเมื่อ ' + new Date(progAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}) + ' · ' : ''}รีเฟรชอัตโนมัติทุก 30 วินาที · แสดงเฉพาะชื่อกลุ่มงานและจำนวนรายการ ไม่แสดงเนื้อหา</p>` + (progErr ? `<p class="err">โหลดข้อมูลล่าสุดไม่ได้: ${esc(progErr)}</p>` : '');
+}
 function loginView(){
   shell('');
   const groups = [...(CFG.WORK_GROUPS || [])].sort(thSort), isG = loginMode === 'group';
@@ -150,7 +185,9 @@ function loginView(){
           <button type="button" class="btn" data-demo="group">${ico('check')}<span><b>ตัวอย่างผู้กรอก</b><small>ดูหน้ากรอกข้อมูล มุมมองกลุ่มงานอื่น และการลงคะแนน</small></span></button>
           <button type="button" class="btn" data-demo="admin">${ico('refresh')}<span><b>ตัวอย่างทีมยุทธศาสตร์</b><small>ดูภาพรวมเมื่อทุกกลุ่มงานกรอกเสร็จ จัดกลุ่มประเด็น และผลโหวต</small></span></button>
         </div></div></div>
+    <section class="panel progress" id="prog" aria-live="polite">${progHtml()}</section>
   </div>`);
+  if (!progAt || Date.now() - progAt > 10000) loadProgress();
 }
 function readDraft(){ const w = $('#wg'); if (!w) return; draft.wg = w.value === '__other' ? ($('#wgt').value || '').trim() : w.value; draft.au = $('#au').value; }
 async function onLogin1(e){
@@ -648,6 +685,8 @@ function boot(){
   if (!session){ loginView(); return; }
   if (session.role === 'admin') enterAdmin(); else enterGroup();
 }
+document.addEventListener('click', e => { if (e.target.closest('[data-progreload]')) loadProgress(); });
+setInterval(() => { if (!session && !document.hidden) loadProgress(); }, 30000);
 const T0 = performance.now();
 function hideSplash(){
   const sp = $('#splash'); if (!sp) return;

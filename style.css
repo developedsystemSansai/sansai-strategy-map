@@ -531,3 +531,31 @@ dialog::backdrop{animation:fadeIn .2s ease both}
 .savebar .mascot{margin-right:8px}
 @media (max-width:640px){.mascot-say .mascot{height:112px}.tic{width:22px;height:22px;margin-right:5px}.hint.has-m .mascot{height:64px}}
 @media print{.mascot,.tic,.stepic{display:none}}
+
+/* ---- สถิติความคืบหน้าบนหน้าล็อกอิน ---- */
+.login .progress{grid-column:1/-1}
+.prog-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.prog-h h2{margin-right:auto}
+.pstats{display:flex;gap:26px;flex-wrap:wrap;margin:4px 0 12px}
+.pstat{display:grid}
+.pstat b{font-size:28px;line-height:1.15;font-variant-numeric:tabular-nums}
+.pstat span{color:var(--muted);font-size:13px}
+.pstat.d b{color:var(--ok)}
+.pstat.w b{color:var(--amber-ink)}
+.pbar{display:flex;height:10px;border-radius:99px;background:#e3e9e7;overflow:hidden;margin-bottom:6px}
+.pbar i{display:block;height:100%;transition:width .5s cubic-bezier(.16,1,.3,1)}
+.pbar .d{background:var(--ok)}
+.pbar .w{background:var(--amber)}
+.pgroup-h{font-weight:600;margin:14px 0 6px;font-size:14.5px}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.pchip{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);background:#fff;border-radius:99px;padding:2px 11px;font-size:13.5px}
+.pchip .ic{width:14px;height:14px}
+.pchip.d{border-color:#a9d9bd;background:#eaf7f0;color:#14532d}
+.pchip.w{border-color:#f1d49a;background:var(--amber-l);color:var(--amber-ink)}
+.pchip.n{color:var(--muted)}
+.pchip small{opacity:.85}
+details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-size:14px}
+.pempty{display:flex;align-items:center;gap:12px;margin-top:10px;color:var(--muted)}
+.pfoot{margin-top:14px}
+@media (prefers-reduced-motion:reduce){.pbar i{transition:none}}
+@media print{.login .progress{display:none}}
