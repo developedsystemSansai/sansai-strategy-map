@@ -19,6 +19,9 @@ try { session = JSON.parse(store.get('sx_session') || 'null'); } catch(e){}
 let G = null, A = null, kseq = 0, loginErr = '', loginMode = 'group', draft = {wg: '', au: ''};
 const viewSw = (cur, attr) => `<span class="seg" role="group" aria-label="รูปแบบการแสดงผล">${[['graph','แผนผังกราฟ'],['list','รายการ']].map(([v, t]) => `<button type="button" class="${cur === v ? 'on' : ''}" ${attr}="${v}" aria-pressed="${cur === v}">${t}</button>`).join('')}</span>`;
 const thSort = (a, b) => a.localeCompare(b, 'th');
+const mas = (n, h = 110) => `<img class="mascot" src="assets/mascot/${n}.webp" alt="" height="${h}" loading="lazy" decoding="async">`;
+const TICON = {fill: 'raise', map: 'path', peer: 'search', vote: 'target', over: 'dashboard', all: 'guide', swot: 'swot', group: 'people', exp: 'export'};
+const stepIc = n => `<img class="stepic" src="assets/icons/${n}.webp" alt="" width="40" height="40" loading="lazy" decoding="async">`;
 const eidOf = e => e.id != null ? String(e.id) : e.wg + '|' + e.body;
 const liAttr = e => `data-oe="${esc(eidOf(e))}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด"`;
 
@@ -63,7 +66,7 @@ function shell(who){
 }
 function setTabs(list, cur, attr, extra){
   const el = $('#tabs'); if (!el) return; el.hidden = false;
-  el.innerHTML = list.map(([k, t], i) => `<button class="tab${cur === k ? ' on' : ''}" role="tab" aria-selected="${cur === k}" ${attr}="${k}"><span class="n">${i + 1}</span>${t}${extra && extra[k] ? extra[k] : ''}</button>`).join('');
+  el.innerHTML = list.map(([k, t], i) => `<button class="tab${cur === k ? ' on' : ''}" role="tab" aria-selected="${cur === k}" ${attr}="${k}"><img class="tic" src="assets/icons/${TICON[k] || 'dashboard'}.webp" alt="" width="26" height="26" decoding="async">${t}${extra && extra[k] ? extra[k] : ''}</button>`).join('');
 }
 function navBtns(list, cur, attr){
   const i = list.findIndex(x => x[0] === cur), p = list[i - 1], n = list[i + 1];
@@ -134,13 +137,13 @@ function loginView(){
       <h1>เขียนมุมมองของกลุ่มงาน เพื่อเลือกยุทธศาสตร์ของโรงพยาบาลร่วมกัน</h1>
       <p class="lead muted">ทุกกลุ่มงานกรอกข้อมูลในมุมของตัวเอง แล้วทีมยุทธศาสตร์จะนำมารวมกันดูภาพรวมในการประชุมเชิงปฏิบัติการ</p>
       <ol class="steps">
-        <li><span class="n">1</span><div><b>กรอกสถานการณ์ของกลุ่มงาน</b><p class="muted small">ข้อมูลและตัวชี้วัดที่ติดตามอยู่ พร้อม SWOT จากหน้างานจริง</p></div></li>
-        <li><span class="n">2</span><div><b>เสนอประเด็นและข้อเสนอ</b><p class="muted small">เรื่องที่ควรแก้หรือเร่งทำ พร้อมระบุระดับความสำคัญ</p></div></li>
-        <li><span class="n">3</span><div><b>ดูว่ากลุ่มงานอื่นคิดอย่างไร</b><p class="muted small">เปิดอ่านมุมมองของกลุ่มงานอื่นได้ตลอด เพื่อเห็นภาพรวมก่อนประชุม</p></div></li>
-        <li><span class="n">4</span><div><b>ส่งให้ทีมยุทธศาสตร์</b><p class="muted small">ระบบบันทึกให้ทุกครั้งที่พิมพ์ และแก้ไขได้จนกว่าจะประชุม</p></div></li>
+        <li>${stepIc('swot')}<div><b>กรอกสถานการณ์ของกลุ่มงาน</b><p class="muted small">ข้อมูลและตัวชี้วัดที่ติดตามอยู่ พร้อม SWOT จากหน้างานจริง</p></div></li>
+        <li>${stepIc('rocket')}<div><b>เสนอประเด็นและข้อเสนอ</b><p class="muted small">เรื่องที่ควรแก้หรือเร่งทำ พร้อมระบุระดับความสำคัญ</p></div></li>
+        <li>${stepIc('people')}<div><b>ดูว่ากลุ่มงานอื่นคิดอย่างไร</b><p class="muted small">เปิดอ่านมุมมองของกลุ่มงานอื่นได้ตลอด เพื่อเห็นภาพรวมก่อนประชุม</p></div></li>
+        <li>${stepIc('done')}<div><b>ส่งให้ทีมยุทธศาสตร์</b><p class="muted small">ระบบบันทึกให้ทุกครั้งที่พิมพ์ และแก้ไขได้จนกว่าจะประชุม</p></div></li>
       </ol>
     </div>
-    <div class="side"><div class="panel"><h2 style="margin-bottom:1rem">${isG ? 'เข้าใช้งานกลุ่มงาน' : 'เข้าสู่ระบบทีมยุทธศาสตร์'}</h2>${form}
+    <div class="side"><div class="mascot-say">${mas('hero', 150)}<p class="bubble">ยินดีต้อนรับครับ เลือกกลุ่มงานของท่านแล้วเริ่มเล่าให้ทีมฟังได้เลย</p></div><div class="panel"><h2 style="margin-bottom:1rem">${isG ? 'เข้าใช้งานกลุ่มงาน' : 'เข้าสู่ระบบทีมยุทธศาสตร์'}</h2>${form}
       <p class="small" style="margin-top:1rem"><button class="linkbtn" data-lmode="${isG ? 'admin' : 'group'}">${isG ? 'สำหรับทีมยุทธศาสตร์ เข้าที่นี่' : '← กลับไปเลือกกลุ่มงาน'}</button></p></div>
       <div class="panel demo-card"><h3>ลองดูตัวอย่างก่อน</h3><p class="muted small">ใช้ข้อมูลสมมติ ไม่ต้องเข้าสู่ระบบ และไม่บันทึกลงฐานข้อมูลจริง</p>
         <div class="demo-btns">
@@ -189,7 +192,7 @@ async function enterGroup(){
     G.entries = (r.entries || []).map(e => ({...e, _k: ++kseq, _st: 'ok'}));
     G.done = !!(r.submission && r.submission.done); G.at = r.submission && r.submission.submitted_at;
     await loadVote(true);
-  } catch(e){ if (e.auth) return logout('เชื่อมต่อไม่สำเร็จ กรุณาเข้าใหม่อีกครั้ง'); view(`<div class="wrap"><div class="empty">${esc(e.message)}<p><button class="btn" data-act="reload" style="margin-top:1rem">ลองใหม่</button></p></div></div>`); return; }
+  } catch(e){ if (e.auth) return logout('เชื่อมต่อไม่สำเร็จ กรุณาเข้าใหม่อีกครั้ง'); view(`<div class="wrap"><div class="empty">${mas('warn')}${esc(e.message)}<p><button class="btn" data-act="reload" style="margin-top:1rem">ลองใหม่</button></p></div></div>`); return; }
   renderGroup();
   G.poll = setInterval(async () => { const was = G.vote.open; await loadVote(false); if (G.tab === 'map'){ if (was !== G.vote.open) setTabs(GTABS, G.tab, 'data-tab', {vote: G.vote.open ? '<span class="live">เปิดอยู่</span>' : ''}); } else if (G.tab === 'vote' ? !G.vote.dirty : was !== G.vote.open) renderGroup(true); }, 20000);
 }
@@ -223,20 +226,20 @@ function blockHtml(b){
     <button class="btn sm" data-add="${b.k}">${ico('plus')}เพิ่ม${KIND[b.k]}</button></div>`;
 }
 function fillHtml(){
-  return `<div class="hint"><b>ยังไม่ต้องเขียนวิสัยทัศน์ พันธกิจ หรือผลลัพธ์สุขภาพ</b> ทีมยุทธศาสตร์จะทบทวนเรื่องเหล่านั้นใหม่หลังรวบรวมข้อมูลจากทุกกลุ่มงาน</div>` + PANELS.map(p => `<section class="section" id="${p.id}"><h2>${p.title}</h2><p class="sub">${esc(p.hint)}</p>
+  return `<div class="hint has-m">${mas('point', 84)}<div><b>ยังไม่ต้องเขียนวิสัยทัศน์ พันธกิจ หรือผลลัพธ์สุขภาพ</b> ทีมยุทธศาสตร์จะทบทวนเรื่องเหล่านั้นใหม่หลังรวบรวมข้อมูลจากทุกกลุ่มงาน</div></div>` + PANELS.map(p => `<section class="section" id="${p.id}"><h2>${p.title}</h2><p class="sub">${esc(p.hint)}</p>
     <div class="blocks ${p.blocks.length >= 2 ? 'two' : ''} ${p.id === 'p-swot' ? 'swot' : ''}">${p.blocks.map(blockHtml).join('')}</div></section>`).join('');
 }
 function barHtml(){
   const n = G.entries.filter(e => e.body.trim()).length, pend = G.entries.filter(e => e._st === 'dirty' || e._st === 'saving' || e._st === 'err').length;
   const msg = G.done
-    ? `<span class="badge-done">${ico('check')}ส่งให้ทีมยุทธศาสตร์แล้ว</span> <span class="muted small">เมื่อ ${fmt(G.at)} · ยังแก้ไขได้ ทีมจะเห็นข้อมูลล่าสุดทันที</span>`
+    ? `${mas('wai', 52)}<span class="badge-done">${ico('check')}ส่งให้ทีมยุทธศาสตร์แล้ว</span> <span class="muted small">เมื่อ ${fmt(G.at)} · ยังแก้ไขได้ ทีมจะเห็นข้อมูลล่าสุดทันที</span>`
     : `<b>${n}</b> รายการ <span class="muted small">${pend ? '· กำลังบันทึก…' : '· บันทึกอัตโนมัติ'} · กดส่งเมื่อกรอกเสร็จเพื่อบอกทีมว่าพร้อมแล้ว</span>`;
   return `<div class="savebar"><div class="savebar-in"><div class="msg" id="barmsg">${msg}</div>
     ${G.done ? `<button class="btn" data-act="undone">ยกเลิกสถานะส่ง</button>` : `<button class="btn pri" data-act="done" ${n ? '' : 'disabled'}>${ico('check')}ส่งให้ทีมยุทธศาสตร์</button>`}</div></div>`;
 }
 function voteHtml(){
   const V = G.vote, used = sumVals(V.mine), left = V.dots - used;
-  if (!V.clusters.length) return `<div class="empty">ทีมยุทธศาสตร์ยังไม่ได้จัดกลุ่มประเด็นสำหรับการลงคะแนน<p class="small" style="margin-top:.4rem">เมื่อเริ่มลงคะแนน หน้านี้จะแสดงประเด็นให้เลือกโดยอัตโนมัติ</p></div>`;
+  if (!V.clusters.length) return `<div class="empty">${mas('think')}ทีมยุทธศาสตร์ยังไม่ได้จัดกลุ่มประเด็นสำหรับการลงคะแนน<p class="small" style="margin-top:.4rem">เมื่อเริ่มลงคะแนน หน้านี้จะแสดงประเด็นให้เลือกโดยอัตโนมัติ</p></div>`;
   return `${V.open ? '' : `<div class="hint warn">ยังไม่เปิดให้ลงคะแนน คะแนนที่เคยให้ไว้แสดงด้านล่าง</div>`}
   <div class="vote-head"><p>แจกจุดคะแนนให้ประเด็นที่ท่านเห็นว่าควรเป็นยุทธศาสตร์ของโรงพยาบาล ให้ประเด็นเดียวกันหลายจุดได้</p><span class="vote-left">เหลือ ${left} จาก ${V.dots} จุด</span></div>
   <div class="vlist">${V.clusters.map(c => { const m = V.mine[c.id] || 0; return `<div class="vcard" data-c="${esc(c.id)}">
@@ -377,7 +380,7 @@ function peerView(){
     <select class="select" data-pf="kind" aria-label="กรองตามประเภท"><option value="">ทุกประเภท</option>${KORDER.map(k => `<option value="${k}"${f.kind === k ? ' selected' : ''}>${KIND[k]}</option>`).join('')}</select>
     <input class="input" data-pf="q" type="search" placeholder="ค้นหาคำ" value="${esc(f.q)}" aria-label="ค้นหา">
     <span class="muted small">${list.length} รายการ</span>${viewSw(P.view, 'data-pview')}<button class="btn sm" data-prefresh>${ico('refresh')}อัปเดต</button></div>
-  ${!P.entries.length ? '<div class="empty">ยังไม่มีกลุ่มงานใดกรอกข้อมูล เมื่อมีคนกรอก จะแสดงที่นี่</div>' :
+  ${!P.entries.length ? `<div class="empty">${mas('think')}ยังไม่มีกลุ่มงานใดกรอกข้อมูล เมื่อมีคนกรอก จะแสดงที่นี่</div>` :
     P.view !== 'list' ? '<div id="gHost" class="ghost"></div>' :
     f.kind ? `<div class="card ${f.kind}">${of(f.kind).map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>` :
     `<div class="quad">${['S','W','O','T'].map(card).join('')}</div><div class="quad">${['ISSUE','IDEA'].map(card).join('')}</div><div class="card DATA" style="margin-bottom:1.5rem"><h3><span class="pill DATA">${KIND.DATA}</span><span class="count">${of('DATA').length}</span></h3>${of('DATA').map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`}`;
@@ -401,7 +404,7 @@ async function loadAdmin(quiet){
   catch(e){
     if (e.auth){ logout('รหัสผ่านทีมยุทธศาสตร์ไม่ถูกต้องหรือถูกเปลี่ยนแล้ว'); return false; }
     if (quiet){ toast(e.message); return false; }
-    view(`<div class="wrap"><div class="empty">${esc(e.message)}<p><button class="btn" data-act="reload" style="margin-top:1rem">ลองใหม่</button></p></div></div>`); return false;
+    view(`<div class="wrap"><div class="empty">${mas('warn')}${esc(e.message)}<p><button class="btn" data-act="reload" style="margin-top:1rem">ลองใหม่</button></p></div></div>`); return false;
   }
 }
 const clName = id => { const c = A.d.clusters.find(x => x.id === id); return c ? c.name : ''; };
@@ -498,7 +501,7 @@ function groupTabView(){
         <input class="input" data-newname placeholder="หรือตั้งชื่อประเด็นใหม่" value="${esc(A.newName)}" maxlength="200" aria-label="ชื่อประเด็นใหม่"><button class="btn sm pri" data-newcl ${sel.length ? '' : 'disabled'}>${ico('plus')}สร้างและย้าย</button></div>
       ${poolHtml || '<p class="muted" style="padding:1.5rem 0">ไม่มีรายการตามตัวกรอง</p>'}</div></section>
     <section><div class="pane-h"><h2>ประเด็นรวม</h2><span class="muted small">${d.clusters.length} ประเด็น</span><button class="btn sm" data-addcl>${ico('plus')}ประเด็นเปล่า</button></div>
-      ${clHtml || '<div class="empty">ยังไม่มีประเด็น เลือกรายการทางซ้ายแล้วกด “สร้างและย้าย”</div>'}</section></div>`;
+      ${clHtml || `<div class="empty">${mas('point')}ยังไม่มีประเด็น เลือกรายการทางซ้ายแล้วกด “สร้างและย้าย”</div>`}</section></div>`;
 }
 
 function voteTabView(){
@@ -513,7 +516,7 @@ function voteTabView(){
   ${rk.length ? `<div class="rank">${rk.map((r, i) => `<div class="rrow"><span class="no">${i + 1}</span><div><b>${esc(r.c.name)}</b>${r.c.note ? `<div class="muted small">${esc(r.c.note)}</div>` : ''}</div>
     <div class="rbar" title="${r.s.total} จุด" style="opacity:${r.s.total ? 1 : .35}">${r.s.total ? dotsHtml(r.s.total, 'var(--amber)', 60) : '<span class="muted small">ยังไม่มีคะแนน</span>'}</div>
     <div class="rmeta"><b style="color:var(--ink);font-size:1.1rem">${r.s.total}</b> จุด · ${r.s.voters} คน<br>${r.s.items} รายการ / ${r.s.groups.size} กลุ่มงาน</div></div>`).join('')}</div>`
-    : '<div class="empty">ยังไม่มีประเด็นให้ลงคะแนน ไปที่แท็บ “จัดกลุ่มประเด็น” ก่อน</div>'}`;
+    : `<div class="empty">${mas('point')}ยังไม่มีประเด็นให้ลงคะแนน ไปที่แท็บ “จัดกลุ่มประเด็น” ก่อน</div>`}`;
 }
 
 function csvEntries(){

@@ -513,3 +513,21 @@ dialog::backdrop{animation:fadeIn .2s ease both}
 .swx-x .quad{margin:8px 0 0}
 .swx-x .card{padding:12px}
 @media (max-width:860px){.swx{grid-template-columns:1fr}.swx-c,.swx-h{display:none}.swx-r{margin-top:6px}}
+
+/* ---- มาสคอตและไอคอนชุดใหม่ ---- */
+.mascot{width:auto;max-width:100%;display:inline-block;vertical-align:middle;user-select:none;-webkit-user-drag:none}
+.empty .mascot{display:block;margin:0 auto 10px}
+.tic{width:26px;height:26px;object-fit:contain;margin-right:7px;flex:none;filter:grayscale(.65) opacity(.78);transition:filter .2s}
+.tab:hover .tic{filter:grayscale(.2) opacity(.95)}
+.tab.on .tic{filter:none}
+.steps li{grid-template-columns:44px 1fr;gap:12px;align-items:start}
+.stepic{width:40px;height:40px;object-fit:contain}
+.mascot-say{display:flex;align-items:flex-end;gap:10px}
+.mascot-say .mascot{height:150px;flex:none}
+.bubble{position:relative;margin:0 0 26px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:14.5px;line-height:1.5;color:var(--ink)}
+.bubble::before{content:"";position:absolute;left:-7px;bottom:16px;width:12px;height:12px;background:#fff;border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+.hint.has-m{display:flex;gap:14px;align-items:center}
+.hint.has-m .mascot{flex:none;height:84px}
+.savebar .mascot{margin-right:8px}
+@media (max-width:640px){.mascot-say .mascot{height:112px}.tic{width:22px;height:22px;margin-right:5px}.hint.has-m .mascot{height:64px}}
+@media print{.mascot,.tic,.stepic{display:none}}
