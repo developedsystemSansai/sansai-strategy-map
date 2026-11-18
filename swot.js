@@ -28,6 +28,7 @@ function list(all, st){
   const q = (st.q || '').trim().toLowerCase();
   const cl = st.mode === 'tows' ? '' : st.cl;                 // มุมมอง TOWS แยกตามประเด็นอยู่แล้ว
   return only4(all).filter(e => (!st.wg || e.wg === st.wg) && (!cl || (cl === '_none' ? !e.cluster_id : e.cluster_id === cl)) &&
+    (!st.fr || (st.fr === '_none' ? !e.frame : e.frame === st.fr)) &&
     (!q || ((e.body || '') + ' ' + (e.detail || '')).toLowerCase().includes(q)));
 }
 
@@ -48,7 +49,7 @@ function consensus(all){
 function liHtml(e, m, cn){
   const n = m.get(eid(e)) || 0, c = e.cluster_id && cn(e.cluster_id);
   return `<div class="li" data-oe="${esc(eid(e))}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด"><p>${esc(e.body)}</p>
-    <div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${c ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(c)}</button>` : ''}${n ? `<span class="chip sim" title="ประมาณจากถ้อยคำที่คล้ายกัน ควรเปิดอ่านประกอบ">ถ้อยคำใกล้เคียงกับอีก ${n} กลุ่มงาน</span>` : ''}</div></div>`;
+    <div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${e.frame && window.FR ? `<span class="chip frame" title="หมวดแนวคิด (ไม่บังคับ)">${esc(FR.label(e.frame))}</span>` : ''}${c ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(c)}</button>` : ''}${n ? `<span class="chip sim" title="ประมาณจากถ้อยคำที่คล้ายกัน ควรเปิดอ่านประกอบ">ถ้อยคำใกล้เคียงกับอีก ${n} กลุ่มงาน</span>` : ''}</div></div>`;
 }
 function cellHtml(k, xs, m, cn){
   return `<div class="card ${k}" role="group" aria-label="${KL[k]}"><h3><span class="pill ${k}">${KL[k]}</span><span class="count muted small">${xs.length}</span></h3>
@@ -59,6 +60,14 @@ function sorter(st, m){
     ? (a, b) => (m.get(eid(b)) || 0) - (m.get(eid(a)) || 0) || thSort(a.wg, b.wg) || thSort(a.body, b.body)
     : (a, b) => thSort(a.wg, b.wg) || thSort(a.body, b.body);
 }
+function frameBar(ctx, st){
+  if (!window.FR || !only4(ctx.all).some(e => e.frame)) return '';          // แสดงต่อเมื่อมีกลุ่มงานที่ระบุหมวดอย่างน้อยหนึ่งรายการ
+  const base = list(ctx.all, Object.assign({}, st, {fr: ''}));
+  const row = (title, fs, ks) => `<div class="fr-row"><span class="fr-t">${title}</span>${fs.map(f => {
+    const n0 = base.filter(e => e.frame === f.k && e.kind === ks[0]).length, n1 = base.filter(e => e.frame === f.k && e.kind === ks[1]).length;
+    return `<button type="button" class="chip fr${st.fr === f.k ? ' on' : ''}" data-ffr="${f.k}" aria-pressed="${st.fr === f.k}" title="${esc(f.en)}">${esc(f.t)} <small>${ks[0]} ${n0} · ${ks[1]} ${n1}</small></button>`; }).join('')}</div>`;
+  return `<div class="frbar">${row('ภายใน (7S)', FR.IN, ['S', 'W'])}${row('ภายนอก (PESTEL)', FR.EX, ['O', 'T'])}<p class="muted small">หมวดเป็นตัวช่วยที่ไม่บังคับ ตอนนี้ ${base.filter(e => !e.frame).length} รายการยังไม่ระบุหมวด · กดหมวดเพื่อกรอง กดซ้ำเพื่อยกเลิก</p></div>`;
+}
 function toolbar(ctx, st, n){
   const groups = [...(ctx.groups || [])].sort(thSort), tows = st.mode === 'tows';
   const seg = `<span class="seg" role="group" aria-label="มุมมอง">${[['matrix', 'ตาราง SWOT'], ['tows', 'TOWS ตามประเด็น']].map(([v, t]) => `<button type="button" class="${st.mode === v ? 'on' : ''}" data-smode="${v}" aria-pressed="${st.mode === v}">${t}</button>`).join('')}</span>`;
@@ -66,6 +75,7 @@ function toolbar(ctx, st, n){
     <select class="select" data-sf="wg" aria-label="กรองตามกลุ่มงาน"><option value="">ทุกกลุ่มงาน</option>${groups.map(g => `<option value="${esc(g)}"${st.wg === g ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>
     ${tows ? '' : `<select class="select" data-sf="cl" aria-label="กรองตามประเด็น"><option value="">ทุกประเด็น</option><option value="_none"${st.cl === '_none' ? ' selected' : ''}>ยังไม่จัดกลุ่ม</option>${ctx.clusters.map(c => `<option value="${esc(c.id)}"${st.cl === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
     <select class="select" data-sf="sort" aria-label="เรียงลำดับ"><option value="wg"${st.sort !== 'sim' ? ' selected' : ''}>เรียงตามกลุ่มงาน</option><option value="sim"${st.sort === 'sim' ? ' selected' : ''}>เรียงตามที่หลายกลุ่มงานพูดตรงกัน</option></select>`}
+    ${window.FR ? `<select class="select" data-sf="fr" aria-label="กรองตามหมวด 7S / PESTEL"><option value="">ทุกหมวด</option><option value="_none"${st.fr === '_none' ? ' selected' : ''}>ยังไม่ระบุหมวด</option><optgroup label="ภายใน (7S)">${FR.IN.map(f => `<option value="${f.k}"${st.fr === f.k ? ' selected' : ''}>${esc(f.t)}</option>`).join('')}</optgroup><optgroup label="ภายนอก (PESTEL)">${FR.EX.map(f => `<option value="${f.k}"${st.fr === f.k ? ' selected' : ''}>${esc(f.t)}</option>`).join('')}</optgroup></select>` : ''}
     <input class="input" data-sf="q" type="search" placeholder="ค้นหาคำ" value="${esc(st.q)}" aria-label="ค้นหา">
     <span class="muted small">${n} รายการ</span>${seg}<button type="button" class="btn sm" data-swcsv>${ic('download')}ดาวน์โหลด CSV</button></div>`;
 }
@@ -112,13 +122,13 @@ function towsHtml(es, ctx, st){
 function html(ctx){
   const st = ctx.st, es = list(ctx.all, st), has = only4(ctx.all).length;
   if (!has) return '<div class="empty">ยังไม่มีกลุ่มงานใดกรอก SWOT เมื่อมีคนกรอก จะแสดงที่นี่</div>';
-  return toolbar(ctx, st, es.length) + (st.mode === 'tows' ? towsHtml(es, ctx, st) : matrixHtml(es, ctx, st));
+  return toolbar(ctx, st, es.length) + frameBar(ctx, st) + (st.mode === 'tows' ? towsHtml(es, ctx, st) : matrixHtml(es, ctx, st));
 }
 function csvRows(all, clusters, st){
   const m = consensus(all), cn = id => (clusters.find(c => c.id === id) || {}).name || '';
-  const rows = [['ปัจจัย', 'ประเภท', 'กลุ่มงาน', 'ผู้กรอก', 'ข้อความ', 'ประเด็นรวม', 'กลุ่มงานอื่นที่ถ้อยคำใกล้เคียง']];
+  const rows = [['ปัจจัย', 'ประเภท', 'กลุ่มงาน', 'ผู้กรอก', 'ข้อความ', 'ประเด็นรวม', 'กลุ่มงานอื่นที่ถ้อยคำใกล้เคียง', 'หมวดแนวคิด (7S/PESTEL)']];
   list(all, st).sort((a, b) => K4.indexOf(a.kind) - K4.indexOf(b.kind) || thSort(a.wg, b.wg))
-    .forEach(e => rows.push([e.kind === 'S' || e.kind === 'W' ? 'ภายใน' : 'ภายนอก', KL[e.kind], e.wg, e.author, e.body, cn(e.cluster_id), m.get(eid(e)) || 0]));
+    .forEach(e => rows.push([e.kind === 'S' || e.kind === 'W' ? 'ภายใน' : 'ภายนอก', KL[e.kind], e.wg, e.author, e.body, cn(e.cluster_id), m.get(eid(e)) || 0, window.FR ? FR.label(e.frame) : '']));
   return rows;
 }
 

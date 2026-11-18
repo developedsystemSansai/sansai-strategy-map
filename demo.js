@@ -121,6 +121,13 @@
   const nid = p => p + (++uid) + Math.random().toString(36).slice(2, 6);
   const clusterId = k => 'demo-c-' + k;
 
+  /* ข้อมูลตัวอย่างเท่านั้น: เดาหมวด 7S/PESTEL จากคำสำคัญ เพื่อให้เห็นว่าหน้าจอแสดงหมวดอย่างไร (ผู้กรอกจริงเลือกเองหรือไม่เลือกก็ได้) */
+  const FR_IN = [['staff', /อัตรากำลัง|บุคลากร|พยาบาล|ภาระงาน|ขาดแคลน|เวร/], ['skills', /ทักษะ|เชี่ยวชาญ|อบรม|ประสบการณ์|เฉพาะทาง/], ['systems', /ระบบ|ข้อมูล|เอกสาร|เครื่อง|ขั้นตอน|กระดาษ/], ['structure', /ประสาน|โครงสร้าง|ส่งต่อ|ข้ามกลุ่ม/], ['style', /ผู้บริหาร|หัวหน้า|ตัดสินใจ/], ['values', /จิตบริการ|วัฒนธรรม|ค่านิยม|ทีมเวิร์ก/], ['strategy', /แผน|ยุทธศาสตร์|เป้าหมาย/]];
+  const FR_EX = [['political', /นโยบาย|กระทรวง|เขตสุขภาพ/], ['economic', /งบ|ชดเชย|ต้นทุน|ราคา|เงิน/], ['social', /ผู้สูงอายุ|ประชากร|ประชาชน|ชุมชน/], ['technological', /เทคโนโลยี|ดิจิทัล|AI|Telemedicine|ออนไลน์/], ['environmental', /ฝุ่น|PM|น้ำท่วม|สิ่งแวดล้อม/], ['legal', /กฎหมาย|PDPA|มาตรฐาน|ร้องเรียน/]];
+  function guessFrame(kind, body){
+    const set = kind === 'S' || kind === 'W' ? FR_IN : kind === 'O' || kind === 'T' ? FR_EX : null; if (!set) return null;
+    const hit = set.find(([, re]) => re.test(body)); return hit ? hit[0] : null;
+  }
   function reset(role){
     uid = 0;
     const base = Date.now() - 1000 * 60 * 60 * 30;
@@ -128,7 +135,7 @@
     DB.clusters = CLUSTERS.map(([k, name, note], i) => ({id: clusterId(k), name, note, sort: i, created_at: new Date(base).toISOString()}));
     ROWS.forEach(([wg, kind, body, detail, pri, cl], i) => DB.entries.push({
       id: 'demo-e' + (i + 1), wg, author: AUTHOR[wg] || 'ผู้กรอกตัวอย่าง', kind, body, detail, priority: pri,
-      cluster_id: cl ? clusterId(cl) : null,
+      cluster_id: cl ? clusterId(cl) : null, frame: guessFrame(kind, body),
       created_at: new Date(base + i * 1000 * 60 * 17).toISOString()
     }));
     GROUPS.forEach(([wg, au], i) => {
@@ -157,8 +164,8 @@
     sx_save_entry: a => {
       const p = a.p_entry || {}; if (!String(p.body || '').trim()) throw new Error('กรุณากรอกข้อความ');
       let e = p.id && DB.entries.find(x => x.id === p.id);
-      if (e) Object.assign(e, {body: p.body, detail: p.detail || '', priority: +p.priority || 2, author: p.author || e.author});
-      else { e = {id: nid('demo-n'), wg: p.wg, author: p.author, kind: p.kind, body: p.body, detail: p.detail || '', priority: +p.priority || 2, cluster_id: null, created_at: now()}; DB.entries.push(e); }
+      if (e) Object.assign(e, {body: p.body, detail: p.detail || '', priority: +p.priority || 2, author: p.author || e.author, frame: p.frame || null});
+      else { e = {id: nid('demo-n'), wg: p.wg, author: p.author, kind: p.kind, body: p.body, detail: p.detail || '', priority: +p.priority || 2, frame: p.frame || null, cluster_id: null, created_at: now()}; DB.entries.push(e); }
       return {id: e.id};
     },
     sx_delete_entry: a => { DB.entries = DB.entries.filter(e => !(e.id === a.p_id && e.wg === a.p_wg)); return true; },

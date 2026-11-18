@@ -242,6 +242,13 @@ async function loadVote(reset){
 }
 const voter = () => (session.author + ' (' + short(session.wg) + ')').slice(0, 80);
 
+function aidHtml(){
+  const a = G.aid = G.aid || {open: false, set: 'in'}, inn = a.set === 'in', list = inn ? FR.IN : FR.EX, kinds = inn ? ['S', 'W'] : ['O', 'T'];
+  return `<details class="aid"${a.open ? ' open' : ''}><summary data-aidsum>${ico('plus')}<b>ตัวช่วยคิดก่อนเขียน SWOT</b><span class="muted small">ไม่บังคับ ข้ามได้ เปิดดูเมื่อไม่แน่ใจว่าจะเขียนอะไร</span></summary>
+    <div class="aid-in"><p class="muted small">กรอบนี้เป็นเพียงคำถามชวนคิด ไม่ต้องตอบครบทุกข้อ กดปุ่มที่การ์ดเพื่อเริ่มเขียนข้อนั้นลงช่อง SWOT ด้านล่าง หรือปิดไว้แล้วเขียนเองตามปกติก็ได้</p>
+    <div class="seg" role="group" aria-label="เลือกกรอบแนวคิด">${[['in', 'มองภายใน (7S) จุดแข็งและจุดอ่อน'], ['ex', 'มองภายนอก (PESTEL) โอกาสและอุปสรรค']].map(([v, t]) => `<button type="button" class="${a.set === v ? 'on' : ''}" data-aidset="${v}" aria-pressed="${a.set === v}">${t}</button>`).join('')}</div>
+    <div class="aid-grid">${list.map(f => `<div class="aid-card"><h4>${esc(f.t)} <small>${esc(f.en)}</small></h4><p class="muted small">${esc(f.q)}</p><div class="aid-btns">${kinds.map(k => `<button type="button" class="btn sm" data-aidadd="${k}" data-fr="${f.k}">${ico('plus')}${KIND[k]}</button>`).join('')}</div></div>`).join('')}</div></div></details>`;
+}
 function itemHtml(e){
   const b = BLOCK[e.kind];
   const st = e._st === 'saving' ? '<span class="st muted">กำลังบันทึก…</span>' : e._st === 'err' ? '<span class="st err2" data-retry>บันทึกไม่สำเร็จ แตะเพื่อลองใหม่</span>' : e._st === 'dirty' ? '<span class="st muted">รอบันทึก…</span>' : e.id ? '<span class="st muted">บันทึกแล้ว</span>' : '<span class="st muted">พิมพ์เพื่อบันทึก</span>';
@@ -250,7 +257,7 @@ function itemHtml(e){
     ${b.detail ? `<textarea class="ta f-detail" rows="1" maxlength="2000" aria-label="${esc(b.ph2)}" placeholder="${esc(b.ph2)}">${esc(e.detail)}</textarea>` : ''}
     <div class="item-foot">
       ${b.pri ? `<label>ความสำคัญ <select class="f-pri" aria-label="ระดับความสำคัญ">${[3,2,1].map(p => `<option value="${p}"${+e.priority === p ? ' selected' : ''}>${PRI[p]}</option>`).join('')}</select></label>` : ''}
-      <span class="sp"></span><span data-st>${st}</span>
+      ${FR.options(e.kind).length ? `<label class="frl">หมวด <select class="f-frame" aria-label="หมวดแนวคิด (ไม่บังคับ)"><option value="">ไม่ระบุ</option>${FR.options(e.kind).map(f => `<option value="${f.k}"${e.frame === f.k ? ' selected' : ''}>${esc(f.t)}</option>`).join('')}</select></label>` : ''}<span class="sp"></span><span data-st>${st}</span>
       <button class="icon-btn" data-del title="ลบรายการนี้" aria-label="ลบรายการนี้">${ico('trash')}</button>
     </div></div>`;
 }
@@ -264,7 +271,7 @@ function blockHtml(b){
 }
 function fillHtml(){
   return `<div class="hint has-m">${mas('point', 84)}<div><b>ยังไม่ต้องเขียนวิสัยทัศน์ พันธกิจ หรือผลลัพธ์สุขภาพ</b> ทีมยุทธศาสตร์จะทบทวนเรื่องเหล่านั้นใหม่หลังรวบรวมข้อมูลจากทุกกลุ่มงาน</div></div>` + PANELS.map(p => `<section class="section" id="${p.id}"><h2>${p.title}</h2><p class="sub">${esc(p.hint)}</p>
-    <div class="blocks ${p.blocks.length >= 2 ? 'two' : ''} ${p.id === 'p-swot' ? 'swot' : ''}">${p.blocks.map(blockHtml).join('')}</div></section>`).join('');
+    ${p.id === 'p-swot' ? aidHtml() : ''}<div class="blocks ${p.blocks.length >= 2 ? 'two' : ''} ${p.id === 'p-swot' ? 'swot' : ''}">${p.blocks.map(blockHtml).join('')}</div></section>`).join('');
 }
 function barHtml(){
   const n = G.entries.filter(e => e.body.trim()).length, pend = G.entries.filter(e => e._st === 'dirty' || e._st === 'saving' || e._st === 'err').length;
@@ -338,7 +345,7 @@ async function saveEntry(e){
   if (!e.body.trim()) return;
   e._saving = true; e._st = 'saving'; setSt(e);
   try {
-    const r = await rpc('sx_save_entry', {p_pass: session.pass, p_entry: {id: e.id || null, wg: session.wg, author: session.author, kind: e.kind, body: e.body, detail: e.detail || '', priority: +e.priority || 2}});
+    const r = await rpc('sx_save_entry', {p_pass: session.pass, p_entry: {id: e.id || null, wg: session.wg, author: session.author, kind: e.kind, body: e.body, detail: e.detail || '', priority: +e.priority || 2, frame: e.frame || null}});
     e.id = r.id; e._st = 'ok';
   } catch(err){ if (err.auth) return logout('เชื่อมต่อไม่สำเร็จ กรุณาเข้าใหม่อีกครั้ง'); e._st = 'err'; toast(err.message); }
   e._saving = false;
@@ -360,6 +367,13 @@ function groupClick(t){
   const tab = t.closest('[data-tab]'); if (tab){ G.tab = tab.dataset.tab; if (G.tab === 'vote') loadVote(false).then(() => renderGroup()); else if (G.tab === 'peer'){ renderGroup(); loadPeer(); } else renderGroup(); return; }
   if (t.closest('[data-prefresh]')){ loadPeer(true); return; }
   const pv = t.closest('[data-pview]'); if (pv){ G.peer.view = pv.dataset.pview; renderGroup(); return; }
+  const asum = t.closest('[data-aidsum]');
+  if (asum){ G.aid = G.aid || {open: false, set: 'in'}; G.aid.open = !asum.closest('details').open; return; }
+  const aset = t.closest('[data-aidset]');
+  if (aset){ G.aid = G.aid || {open: true, set: 'in'}; G.aid.set = aset.dataset.aidset; G.aid.open = true; renderGroup(); return; }
+  const aadd = t.closest('[data-aidadd]');
+  if (aadd){ const e = {_k: ++kseq, kind: aadd.dataset.aidadd, body: '', detail: '', priority: 2, frame: aadd.dataset.fr, _st: 'new'}; G.entries.push(e); G.aid = G.aid || {set: 'in'}; G.aid.open = true; renderGroup();
+    const el = $(`.item[data-k="${e._k}"] .f-body`); if (el){ if (el.scrollIntoView) el.scrollIntoView({block: 'center', behavior: 'smooth'}); el.focus({preventScroll: true}); } return; }
   const add = t.closest('[data-add]');
   if (add){ const e = {_k: ++kseq, kind: add.dataset.add, body: '', detail: '', priority: 2, _st: 'new'}; G.entries.push(e); renderGroup(); const el = $(`.item[data-k="${e._k}"] .f-body`); if (el) el.focus(); return; }
   const del = t.closest('[data-del]');
@@ -384,7 +398,7 @@ function groupClick(t){
 }
 function groupInput(t){
   const it = t.closest('.item'); if (!it) return; const e = ent(it.dataset.k);
-  if (t.classList.contains('f-body')) e.body = t.value; else if (t.classList.contains('f-detail')) e.detail = t.value; else if (t.classList.contains('f-pri')) e.priority = +t.value;
+  if (t.classList.contains('f-body')) e.body = t.value; else if (t.classList.contains('f-detail')) e.detail = t.value; else if (t.classList.contains('f-pri')) e.priority = +t.value; else if (t.classList.contains('f-frame')) e.frame = t.value || null;
   if (t.tagName === 'TEXTAREA'){ t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
   sched(e, t.tagName === 'SELECT');
 }
@@ -408,7 +422,7 @@ function peerView(){
   const byWg = {}; P.entries.forEach(e => (byWg[e.wg] = byWg[e.wg] || []).push(e));
   const wgs = Object.keys(byWg).sort(thSort);
   const list = peerList();
-  const li = e => `<div class="li" ${liAttr(e)}><p>${esc(e.body)}</p>${e.detail ? `<p class="muted small">${esc(e.detail)}</p>` : ''}<div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}${e.wg === session.wg ? '<span class="chip own">กลุ่มของท่าน</span>' : ''}${e.cluster_id && cn(e.cluster_id) ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(cn(e.cluster_id))}</button>` : ''}</div></div>`;
+  const li = e => `<div class="li" ${liAttr(e)}><p>${esc(e.body)}</p>${e.detail ? `<p class="muted small">${esc(e.detail)}</p>` : ''}<div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${e.frame ? `<span class="chip frame">${esc(FR.label(e.frame))}</span>` : ''}${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}${e.wg === session.wg ? '<span class="chip own">กลุ่มของท่าน</span>' : ''}${e.cluster_id && cn(e.cluster_id) ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(cn(e.cluster_id))}</button>` : ''}</div></div>`;
   const of = k => list.filter(e => e.kind === k).sort((a, b) => b.priority - a.priority);
   const card = k => `<div class="card ${k}"><h3><span class="pill ${k}">${KIND[k]}</span><span class="count">${of(k).length}</span></h3>${of(k).map(li).join('') || '<p class="muted small">ไม่มีรายการ</p>'}</div>`;
   return `<div class="sum"><div><b>${wgs.length}</b><span>กลุ่มงานที่เริ่มกรอกแล้ว</span></div><div><b>${P.done.length}</b><span>กลุ่มงานที่ส่งแล้ว</span></div><div><b>${P.entries.length}</b><span>รายการทั้งหมด</span></div></div>
@@ -466,7 +480,7 @@ function dotsHtml(n, color, cap = 40){
 }
 function entryLi(e, showCl = true){
   return `<div class="li" ${liAttr(e)}><p>${esc(e.body)}</p>${e.detail ? `<p class="muted small">${esc(e.detail)}</p>` : ''}
-    <div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}
+    <div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${e.frame ? `<span class="chip frame">${esc(FR.label(e.frame))}</span>` : ''}${['ISSUE','IDEA'].includes(e.kind) ? `<span>· ${PRI[e.priority]}</span>` : ''}
     ${showCl && e.cluster_id ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(clName(e.cluster_id))}</button>` : ''}</div></div>`;
 }
 
@@ -604,6 +618,7 @@ function adminClick(t){
   const av = t.closest('[data-aview]'); if (av){ A.view = av.dataset.aview; return renderAdmin(); }
   const sm = t.closest('[data-smode]'); if (sm){ A.sw.mode = sm.dataset.smode; return renderAdmin(); }
   const sx = t.closest('[data-swx]'); if (sx){ const id = sx.dataset.swx; A.sw.open.has(id) ? A.sw.open.delete(id) : A.sw.open.add(id); return renderAdmin(); }
+  if (t.closest('[data-ffr]')){ const v = t.closest('[data-ffr]').dataset.ffr; A.sw.fr = A.sw.fr === v ? '' : v; return renderAdmin(); }
   if (t.closest('[data-swcsv]')){ if (window.SXS) download(`sx-swot-${new Date().toISOString().slice(0, 10)}.csv`, toCSV(SXS.csvRows(A.d.entries, A.d.clusters, A.sw)), 'text/csv;charset=utf-8'); return; }
   const pk = t.closest('[data-pk]'); if (pk){ const k = pk.dataset.pk; A.pk.has(k) ? A.pk.delete(k) : A.pk.add(k); return renderAdmin(); }
   if (t.closest('[data-free]')){ A.onlyFree = !A.onlyFree; return renderAdmin(); }
@@ -676,7 +691,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.id === 'wg'){ $('#wgo').hidden = t.value !== '__other'; return; }
-  if (G && session && session.role === 'group'){ if (t.dataset.pf && t.dataset.pf !== 'q'){ G.peer.f[t.dataset.pf] = t.value; renderGroup(); } else if (t.classList.contains('f-pri')) groupInput(t); return; }
+  if (G && session && session.role === 'group'){ if (t.dataset.pf && t.dataset.pf !== 'q'){ G.peer.f[t.dataset.pf] = t.value; renderGroup(); } else if (t.classList.contains('f-pri') || t.classList.contains('f-frame')) groupInput(t); return; }
   if (A) adminChange(t);
 });
 function boot(){

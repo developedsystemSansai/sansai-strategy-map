@@ -559,3 +559,28 @@ details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-siz
 .pfoot{margin-top:14px}
 @media (prefers-reduced-motion:reduce){.pbar i{transition:none}}
 @media print{.login .progress{display:none}}
+
+/* ---- ตัวช่วยคิด 7S / PESTEL (ไม่บังคับ) ---- */
+.aid{background:#fff;border:1px solid var(--line);border-radius:var(--r);margin:0 0 1rem}
+.aid>summary{cursor:pointer;padding:.7rem 1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;list-style:none}
+.aid>summary::-webkit-details-marker{display:none}
+.aid>summary:hover{background:var(--pri-t)}
+.aid[open]>summary{border-bottom:1px solid var(--line-2)}
+.aid-in{padding:1rem}
+.aid .seg{margin:.6rem 0 1rem;flex-wrap:wrap}
+.aid-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.7rem}
+.aid-card{border:1px solid var(--line-2);border-radius:9px;padding:.75rem;display:grid;gap:.4rem;align-content:start;background:#fbfdfc}
+.aid-card h4{margin:0;font-size:15px}
+.aid-card h4 small{color:var(--muted);font-weight:400}
+.aid-btns{display:flex;gap:.4rem;flex-wrap:wrap}
+.frl{display:inline-flex;gap:.3rem;align-items:center}
+.frl select{max-width:11rem}
+.frbar{display:grid;gap:.45rem;margin:0 0 1rem}
+.fr-row{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}
+.fr-t{font-weight:600;font-size:13px;margin-right:.3rem}
+.chip.fr{cursor:pointer}
+.chip.fr small{color:var(--muted)}
+.chip.fr.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.chip.fr.on small{color:#d6efeb}
+.chip.frame{border-style:dashed;color:var(--muted)}
+@media print{.aid{display:none}}
