@@ -670,3 +670,13 @@ details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-siz
 @media (max-width:1100px){.bmain{grid-template-columns:1fr}.binsight{position:static;max-height:none}}
 @media (max-width:700px){.bl-h{display:none}.snote.row{grid-template-columns:1fr;gap:4px}.bfilters .select,.bfilters .input{width:100%}.bstats{gap:16px}}
 @media print{.board-wrap{display:none}}
+
+/* ---- ปรับกระดานให้ไม่รก: การ์ดว่างย่อเป็นแถบ + กันข้อความล้นการ์ด ---- */
+.bempties{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:10px;border-top:1px dashed rgba(20,48,43,.2)}
+.be-t{font-size:13px;color:var(--muted);margin-right:4px}
+.chip.be{border-style:dashed;color:var(--muted);background:transparent;cursor:help}
+.bnone{margin:0 0 4px}
+.bcard,.snote,.in-sec,.bsel{min-width:0}
+.snote .sn-body,.in-li,.bsel b,.bcard h3{overflow-wrap:anywhere;word-break:break-word}
+.sn-foot .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+.snote.row .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:top}

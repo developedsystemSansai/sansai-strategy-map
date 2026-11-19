@@ -21,7 +21,7 @@ const ts = e => Date.parse(e.updated_at || e.created_at || '') || 0;
 const ic = n => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const frLabel = k => (window.FR && FR.label(k)) || '';
 
-function initState(){ return {view: 'board', wg: '', cl: '', fr: '', kinds: new Set(), q: '', sort: 'breadth', open: new Set(), openAll: false, closed: new Set(), sim: ''}; }
+function initState(){ return {view: 'board', wg: '', cl: '', fr: '', kinds: new Set(), q: '', sort: 'breadth', open: new Set(), openAll: false, closed: new Set(), sim: '', showEmpty: false}; }
 
 /* ---------- กรองและจัดเรียง ---------- */
 function filterList(all, st, skipFrame){
@@ -52,8 +52,10 @@ function buildCards(fe, st){
     let cs = b.frames().map(f => ({key: f.k, f, es: mine.filter(e => e.frame === f.k)}));
     cs.push({key: b.id + ':_none', f: null, es: mine.filter(e => !e.frame || !b.frames().some(f => f.k === e.frame))});
     if (st.fr) cs = cs.filter(c => st.fr === '_none' ? c.f === null : c.key === st.fr);
-    return {b, cs, n: mine.length, gs: new Set(mine.map(e => e.wg)).size};
-  }).filter(x => x.cs.length);
+    const vis = [], empties = [];                                           // การ์ดที่ไม่มีรายการ ย่อเป็นแถบชิปแทน (กดแสดงเป็นการ์ดได้)
+    cs.forEach(c => { if (c.es.length || st.showEmpty) vis.push(c); else if (c.f) empties.push(c.f); });
+    return {b, cs: vis, empties, n: mine.length, gs: new Set(mine.map(e => e.wg)).size};
+  }).filter(x => x.cs.length || x.empties.length);
 }
 function noteHtml(e, m, cn, st, hot){
   const n = breadthOf(m, e), c = e.cluster_id ? cn(e.cluster_id) : '', id = eid(e);
@@ -139,15 +141,16 @@ function html(ctx){
       <select class="select" data-bf="sort" aria-label="จัดเรียง">${opt('breadth', 'เรียงตามจำนวนกลุ่มงานที่พูดตรงกัน', st.sort)}${opt('recent', 'เรียงตามล่าสุด', st.sort)}${opt('group', 'เรียงตามชื่อกลุ่มงาน', st.sort)}</select>
       <span class="seg" role="group" aria-label="รูปแบบการแสดงผล">${[['board', 'กระดาน'], ['list', 'รายการ']].map(([v, t]) => `<button type="button" class="${st.view === v ? 'on' : ''}" data-bv="${v}" aria-pressed="${st.view === v}">${t}</button>`).join('')}</span>
       ${st.view === 'board' ? `<button type="button" class="btn sm" data-bexp="${st.openAll ? 'none' : 'all'}">${st.openAll ? 'ย่อทุกการ์ด' : 'ขยายทุกการ์ด'}</button>` : ''}
+      ${st.view === 'board' ? `<button type="button" class="btn sm" data-bempty aria-pressed="${st.showEmpty}">${st.showEmpty ? 'ซ่อนการ์ดว่าง' : 'แสดงการ์ดว่าง'}</button>` : ''}
       <button type="button" class="btn sm" data-breset ${fl ? '' : 'disabled'}>รีเซ็ตตัวกรอง</button></div></div>`;
   let strip = '';
   if (selE){ const gl = groupsOf(selE, pool); strip = `<div class="bsel" role="status"><span class="pill ${selE.kind}">${selE.kind}</span> <b>${esc(selE.body)}</b><span>พบใน ${gl.length} กลุ่มงาน: ${esc(gl.map(short).join(', '))}</span><button type="button" class="btn sm" data-bsimclear>ล้างการเลือก</button></div>`; }
   let body;
   if (!fe.length) body = `<div class="empty">${ctx.mas ? ctx.mas('think') : ''}ไม่พบรายการตามตัวกรองที่เลือก<p><button type="button" class="btn" data-breset style="margin-top:.8rem">รีเซ็ตตัวกรอง</button></p></div>`;
   else if (st.view === 'list') body = listHtml(fe, m, cn, st, hot);
-  else body = buildCards(fe, st).map(({b, cs, n, gs: g}) => { const shut = st.closed.has(b.id);
+  else body = buildCards(fe, st).map(({b, cs, empties, n, gs: g}) => { const shut = st.closed.has(b.id);
     return `<section class="board ${b.id}${shut ? ' shut' : ''}"><header class="board-h"><div><h2>${b.title}</h2><p>${b.sub}</p></div><div class="board-stat">${n} รายการ · ${g} กลุ่มงาน</div><button type="button" class="btn sm" data-bboard="${b.id}" aria-expanded="${!shut}">${shut ? 'ขยายกระดาน' : 'ย่อกระดาน'}</button></header>
-      ${shut ? '' : `<div class="bcards">${cs.map(c => cardHtml(c, b, m, cn, st, hot)).join('')}</div>`}</section>`; }).join('');
+      ${shut ? '' : `${cs.length ? `<div class="bcards">${cs.map(c => cardHtml(c, b, m, cn, st, hot)).join('')}</div>` : '<p class="muted small bnone">ยังไม่มีรายการในกระดานนี้</p>'}${empties.length ? `<div class="bempties"><span class="be-t">หมวดที่ยังไม่มีรายการ (${empties.length})</span>${empties.map(f => `<span class="chip be" title="${esc(f.q)}">${esc(f.t)}</span>`).join('')}</div>` : ''}`}</section>`; }).join('');
   return `<div class="board-wrap">${head}${strip}<div class="bmain"><div class="bboards">${body}</div>${insightHtml(fe, m, pool, cn)}</div></div>`;
 }
 
@@ -168,7 +171,7 @@ function svg(all, ctx){
   parts.push(`<text x="${pad}" y="${y + 28}" font-size="30" font-weight="700" fill="#14302b">Strategic Analysis Board · โรงพยาบาลสันทราย</text>`);
   parts.push(`<text x="${pad}" y="${y + 56}" font-size="16" fill="#5b6f6a">${esc(fe.length)} รายการ จาก ${new Set(fe.map(e => e.wg)).size} กลุ่มงาน · สร้างเมื่อ ${esc(new Date().toLocaleString('th-TH'))} · ข้อมูลจริงจากกลุ่มงาน (S/W/O/T)</text>`);
   y += 84;
-  buildCards(fe, Object.assign({}, st, {fr: ''})).forEach(({b, cs, n}) => {
+  buildCards(fe, Object.assign({}, st, {fr: '', showEmpty: false})).forEach(({b, cs, empties, n}) => {
     parts.push(`<rect x="${pad}" y="${y}" width="${W - pad * 2}" height="50" rx="10" fill="${b.c[0]}"/><text x="${pad + 18}" y="${y + 32}" font-size="22" font-weight="700" fill="#fff">${esc(b.title)}</text><text x="${W - pad - 18}" y="${y + 32}" font-size="16" fill="#fff" text-anchor="end">${n} รายการ · ${esc(b.sub)}</text>`);
     y += 50 + gap;
     for (let i = 0; i < cs.length; i += cols){
@@ -186,6 +189,7 @@ function svg(all, ctx){
         r.ps.forEach(p => parts.push(p.replace(/__Y(\d+(?:\.\d+)?)/g, (_, d) => String(y + Number(d))))); });
       y += rh + gap;
     }
+    if (empties.length){ const ls = wrap('หมวดที่ยังไม่มีรายการ: ' + empties.map(f => f.t).join(' · '), W - pad * 2 - 8, 14, 400, 2); ls.forEach((l, k) => parts.push(`<text x="${pad + 4}" y="${y + 16 + k * 20}" font-size="14" fill="#5b6f6a">${esc(l)}</text>`)); y += ls.length * 20 + 8; }
     y += 10;
   });
   const H = y + pad - 10;
@@ -193,8 +197,8 @@ function svg(all, ctx){
 }
 function printHtml(all, ctx){
   const st = ctx.st, m = cons(all), cn = id => (ctx.clusters.find(c => c.id === id) || {}).name || '', fe = filterList(all, st);
-  const sec = ({b, cs, n}) => `<h2>${esc(b.title)} · ${n} รายการ</h2>` + cs.map(c => { const es = c.es.slice().sort(sorter(st, m)); return `<h3>${esc(c.f ? c.f.t + ' (' + c.f.en + ')' : b.none)} · ${es.length} รายการ</h3>${es.length ? `<ul>${es.map(e => `<li><b>${e.kind}</b> ${esc(e.body)} <small>(${esc(short(e.wg))}${breadthOf(m, e) ? ' · ×' + (breadthOf(m, e) + 1) + ' กลุ่ม' : ''}${e.cluster_id ? ' · ประเด็น: ' + esc(cn(e.cluster_id)) : ''})</small></li>`).join('')}</ul>` : '<p><small>ยังไม่มีรายการ</small></p>'}`; }).join('');
-  return `<img src="assets/logo.png" alt="" style="height:64px;margin-bottom:8px"><h1>Strategic Analysis Board · โรงพยาบาลสันทราย</h1><p>พิมพ์เมื่อ ${esc(new Date().toLocaleString('th-TH'))} · ${fe.length} รายการ S/W/O/T จาก ${new Set(fe.map(e => e.wg)).size} กลุ่มงาน · ข้อมูลจริงจากกลุ่มงาน</p>${buildCards(fe, Object.assign({}, st, {fr: ''})).map(sec).join('')}`;
+  const sec = ({b, cs, empties, n}) => `<h2>${esc(b.title)} · ${n} รายการ</h2>` + cs.map(c => { const es = c.es.slice().sort(sorter(st, m)); return `<h3>${esc(c.f ? c.f.t + ' (' + c.f.en + ')' : b.none)} · ${es.length} รายการ</h3>${es.length ? `<ul>${es.map(e => `<li><b>${e.kind}</b> ${esc(e.body)} <small>(${esc(short(e.wg))}${breadthOf(m, e) ? ' · ×' + (breadthOf(m, e) + 1) + ' กลุ่ม' : ''}${e.cluster_id ? ' · ประเด็น: ' + esc(cn(e.cluster_id)) : ''})</small></li>`).join('')}</ul>` : '<p><small>ยังไม่มีรายการ</small></p>'}`; }).join('') + (empties.length ? `<p><small>หมวดที่ยังไม่มีรายการ: ${esc(empties.map(f => f.t).join(' · '))}</small></p>` : '');
+  return `<img src="assets/logo.png" alt="" style="height:64px;margin-bottom:8px"><h1>Strategic Analysis Board · โรงพยาบาลสันทราย</h1><p>พิมพ์เมื่อ ${esc(new Date().toLocaleString('th-TH'))} · ${fe.length} รายการ S/W/O/T จาก ${new Set(fe.map(e => e.wg)).size} กลุ่มงาน · ข้อมูลจริงจากกลุ่มงาน</p>${buildCards(fe, Object.assign({}, st, {fr: '', showEmpty: false})).map(sec).join('')}`;
 }
 function png(all, ctx){
   const s = svg(all, ctx), img = new Image(), t = ctx.tools;
@@ -210,6 +214,7 @@ function click(t, st, ctx){
   let x;
   if ((x = g('data-bsim'))){ const id = x.dataset.bsim; st.sim = st.sim === id ? '' : id; return 'render'; }
   if (g('data-bsimclear')){ st.sim = ''; return 'render'; }
+  if (g('data-bempty')){ st.showEmpty = !st.showEmpty; return 'render'; }
   if ((x = g('data-bv'))){ st.view = x.dataset.bv; return 'render'; }
   if ((x = g('data-bk'))){ const k = x.dataset.bk; st.kinds.has(k) ? st.kinds.delete(k) : st.kinds.add(k); return 'render'; }
   if ((x = g('data-bcard'))){ const k = x.dataset.bcard; if (st.openAll){ st.openAll = false; BOARDS.forEach(b => { (window.FR ? b.frames() : []).forEach(f => st.open.add(f.k)); st.open.add(b.id + ':_none'); }); } st.open.has(k) ? st.open.delete(k) : st.open.add(k); return 'render'; }

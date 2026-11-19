@@ -31,9 +31,15 @@ const short = g => String(g).replace(/^กลุ่มงาน/, '');
   const total = ev("A.d.entries.filter(e => 'SWOT'.includes(e.kind)).length");
   ok(+$('.bstats b').textContent === total && total > 10, 'จำนวนรายการทั้งหมดตรงกับข้อมูลในระบบ (' + total + ')');
   ok(!!$('.board.in') && !!$('.board.ex') && /7S/.test($('.board.in h2').textContent) && /PESTEL/.test($('.board.ex h2').textContent), 'มี 2 กระดาน: ภายใน 7S และภายนอก PESTEL');
-  ok($$('.board.in .bcard').length === 8 && $$('.board.ex .bcard').length === 7, 'การ์ดครบ: 7S 7 ใบ + ยังไม่ระบุหมวด / PESTEL 6 ใบ + ยังไม่ระบุหมวด');
+  const hasNone = side => ev("A.d.entries.filter(e => " + (side === 'in' ? "'SW'" : "'OT'") + ".includes(e.kind) && !e.frame).length > 0") ? 1 : 0;
+  ok($$('.board.in .bcard').length + $$('.board.in .chip.be').length === 7 + hasNone('in') && $$('.board.ex .bcard').length + $$('.board.ex .chip.be').length === 6 + hasNone('ex'), 'ทุกหมวดมีที่อยู่: การ์ดที่มีรายการ + แถบชิปของหมวดว่าง รวมครบ 7S 7 / PESTEL 6');
+  ok($$('.bcard').every(c => c.querySelector('.snote')), 'ไม่มีการ์ดว่างบนกระดาน (การ์ดทุกใบมีรายการอย่างน้อยหนึ่งใบ)');
+  const cards0 = $$('.bcard').length; ok(cards0 < 15, 'การ์ดที่แสดงน้อยกว่า 15 ใบ (' + cards0 + ') เพราะหมวดว่างย่อเป็นแถบ');
+  ok($$('.bempties').length >= 1 && !!$('.chip.be[title]'), 'มีแถบ "หมวดที่ยังไม่มีรายการ" พร้อมคำถามนำเมื่อชี้ที่ชิป');
+  click($('[data-bempty]')); await sleep(120); ok($$('.bcard').length === 15 && !$('.bempties') && $('[data-bempty]').textContent.includes('ซ่อน'), 'ปุ่ม "แสดงการ์ดว่าง": แสดงครบ 15 ใบ');
+  click($('[data-bempty]')); await sleep(120); ok($$('.bcard').length === cards0, 'ปุ่ม "ซ่อนการ์ดว่าง": กลับเป็น ' + cards0 + ' ใบ');
   const sumCounts = $$('.bcount').reduce((s, c) => s + +c.textContent, 0); ok(sumCounts === total, 'ผลรวมจำนวนในการ์ดทุกใบเท่ากับรายการทั้งหมด ไม่มีรายการตกหล่น (' + sumCounts + ')');
-  ok(['strategy', 'systems', 'staff'].every(k => $('.bcard[data-bcardkey="' + k + '"]')) && $('.bcard[data-bcardkey="in:_none"]') && $('.bcard[data-bcardkey="ex:_none"]'), 'การ์ดตรงกับคีย์ frames.js และมีการ์ดยังไม่ระบุหมวดของแต่ละกระดาน');
+  const okKeys = $$('.bcard').map(c => c.dataset.bcardkey); ok(okKeys.every(k => /:_none$/.test(k) || ev("FR.get('" + k + "') !== null")), 'คีย์การ์ดทุกใบตรงกับ frames.js หรือเป็นการ์ดยังไม่ระบุหมวด');
   const note = $('.bcard .snote'); ok(!!note && note.dataset.oe && note.querySelector('.pill') && note.querySelector('.sn-foot .chip'), 'sticky note แสดงประเภท S/W/O/T ข้อความ และกลุ่มงานต้นทาง');
   ok(!!$('.in-sec.facts') && !!$('.in-sec.hints') && /ข้อมูลจริงจากกลุ่มงาน/.test($('.in-sec.facts').textContent) && /ไม่ใช่ข้อสรุปจาก AI/.test($('.in-sec.hints').textContent), 'แผงวิเคราะห์แยก "ข้อมูลจริง" ออกจาก "ข้อสังเกต (ไม่ใช่ AI)" ชัดเจน');
   ok(/จุดแข็งสำคัญ/.test($('.binsight').textContent) && /ความเสี่ยงที่ต้องเฝ้าระวัง/.test($('.binsight').textContent) && /หมวดที่มีประเด็นมากที่สุด/.test($('.binsight').textContent), 'แผงวิเคราะห์มีหัวข้อครบตามที่กำหนด');
@@ -51,14 +57,14 @@ const short = g => String(g).replace(/^กลุ่มงาน/, '');
   const wg = ev("A.d.entries.filter(e => 'SWOT'.includes(e.kind))[0].wg"), wgN = ev("A.d.entries.filter(e => 'SWOT'.includes(e.kind) && e.wg === '" + wg + "').length");
   let sel = $('select[data-bf="wg"]'); sel.value = wg; sel.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(200);
   ok($$('.snote').length === wgN && $$('.snote .sn-foot .chip:first-child').every(c => c.textContent === short(wg)), 'กรองกลุ่มงาน: เหลือเฉพาะ ' + short(wg) + ' (' + wgN + ')');
-  click($('[data-breset]')); await sleep(150); ok($$('.bcard').length === 15 && $('[data-breset]').disabled, 'รีเซ็ตตัวกรองแล้วกลับเป็นกระดานเต็ม');
+  click($('[data-breset]')); await sleep(150); ok($$('.bcard').length === cards0 && $('[data-breset]').disabled, 'รีเซ็ตตัวกรองแล้วกลับเป็นกระดานเต็ม');
   click($('[data-bk="S"]')); await sleep(150);
   ok($$('.snote.S').length > 0 && $$('.snote.W,.snote.O,.snote.T').length === 0 && $('[data-bk="S"]').getAttribute('aria-pressed') === 'true', 'กรองประเภท S: แสดงเฉพาะจุดแข็ง');
   click($('[data-breset]')); await sleep(100);
   sel = $('select[data-bf="fr"]'); sel.value = 'systems'; sel.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(150);
   ok($$('.bcard').length === 1 && $('.bcard').dataset.bcardkey === 'systems', 'กรองหมวด 7S: เหลือการ์ดระบบงานใบเดียว');
   sel = $('select[data-bf="fr"]'); sel.value = '_none'; sel.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(150);
-  ok($$('.bcard').length === 2 && $$('.bcard').every(c => c.classList.contains('none')), 'กรอง "ยังไม่ระบุหมวด": เหลือการ์ดยังไม่ระบุของแต่ละกระดาน');
+  ok($$('.bcard').length >= 1 && $$('.bcard').every(c => c.classList.contains('none')), 'กรอง "ยังไม่ระบุหมวด": เหลือเฉพาะการ์ดยังไม่ระบุหมวด');
   click($('[data-breset]')); await sleep(100);
   const cl0 = ev("A.d.clusters[0].id"); sel = $('select[data-bf="cl"]'); sel.value = cl0; sel.dispatchEvent(new w.Event('change', {bubbles: true})); await sleep(150);
   const clN = ev("A.d.entries.filter(e => 'SWOT'.includes(e.kind) && e.cluster_id === '" + cl0 + "').length"); ok($$('.snote').length === clN, 'กรองตามประเด็นยุทธศาสตร์ (' + clN + ' รายการ)');
@@ -83,11 +89,19 @@ const short = g => String(g).replace(/^กลุ่มงาน/, '');
   click($('[data-bv="list"]')); await sleep(150);
   ok(!!$('.blist') && $$('.blist .snote.row').length === total && $$('.bcard').length === 0, 'มุมมองรายการ: แสดงครบ ' + total + ' รายการ');
   click($$('.blist .snote.row')[0]); await sleep(120); ok(!$('#sxDrawer').hidden, 'มุมมองรายการ: คลิกแถวเปิดแผงรายละเอียด'); click($('#sxDrawer [data-dclose]')); await sleep(40);
-  click($('[data-bv="board"]')); await sleep(100); ok($$('.bcard').length === 15, 'สลับกลับมุมมองกระดานได้');
+  click($('[data-bv="board"]')); await sleep(100); ok($$('.bcard').length === cards0, 'สลับกลับมุมมองกระดานได้');
   // ส่งออก
   const rows = ev("SXB.rows(A.d.entries, boardCtx())"); ok(rows.length === total + 1 && rows[0].includes('หมวดแนวคิด') && rows[0].includes('ข้อความ'), 'CSV (Excel): ' + (rows.length - 1) + ' แถว มีคอลัมน์หมวดแนวคิด');
   const sv = ev("SXB.svg(A.d.entries, boardCtx())"); ok(/^<svg/.test(sv) && /BOARD A/.test(sv) && /BOARD B/.test(sv) && /Strategic Analysis Board/.test(sv), 'สร้างภาพกระดาน (SVG สำหรับ PNG) ได้ครบสองกระดาน');
   click($('[data-bexport="pdf"]')); await sleep(200); ok(/Strategic Analysis Board/.test($('#printArea').textContent) && $('#printArea').querySelectorAll('li').length >= total, 'พิมพ์ / PDF: สร้างเอกสารครบ ' + total + ' รายการ');
+  // ข้อมูลจริงช่วงแรก: ยังไม่มีใครระบุหมวด → ต้องไม่เกิดการ์ดว่างเต็มจอ
+  const keep = ev("JSON.stringify(A.d.entries)"); ev("A.d.entries = A.d.entries.map(e => Object.assign({}, e, {frame: null})); renderAdmin()"); await sleep(150);
+  ok($$('.bcard').length <= 2 && $$('.bcard').every(c => c.classList.contains('none') && c.querySelector('.snote')), 'ยังไม่มีใครระบุหมวด: เหลือการ์ด "ยังไม่ระบุหมวด" เท่านั้น (' + $$('.bcard').length + ' ใบ)');
+  ok($$('.board.in .chip.be').length === 7 && $$('.board.ex .chip.be').length === 6, 'หมวดทั้ง 13 หมวดย่อเป็นแถบชิป ไม่ทำให้หน้ารก');
+  ev("A.d.entries = JSON.parse(" + JSON.stringify(keep) + "); renderAdmin()"); await sleep(120);
+  // ข้อความยาวไม่ล้นการ์ด
+  const css = require('fs').readFileSync(root + '/style.css', 'utf8');
+  ok(/\.snote \.sn-body[^{]*\{[^}]*overflow-wrap:anywhere/.test(css) && /\.sn-foot \.chip\{[^}]*text-overflow:ellipsis/.test(css) && /\.bcard,\.snote[^{]*\{min-width:0\}/.test(css), 'CSS กันข้อความและชื่อกลุ่มงานยาวล้นการ์ด');
   // ฟังก์ชันเดิมไม่เสีย
   click($('[data-atab="swot"]')); await sleep(300); ok($$('.swx .card').length === 4 && !!$('.frbar'), 'หน้าสำรวจ SWOT เดิมยังทำงานปกติ');
   // Empty state ทั้งกระดาน
