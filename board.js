@@ -62,7 +62,7 @@ function noteHtml(e, m, cn, st, hot){
   const cls = ['snote', e.kind, hot.has(id) ? 'sim' : '', st.sim === id ? 'sel' : ''].filter(Boolean).join(' ');
   return `<article class="${cls}" data-oe="${esc(id)}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด ${esc(KL[e.kind])} จาก ${esc(short(e.wg))}">
     <div class="sn-top"><span class="pill ${e.kind}">${e.kind} · ${KL[e.kind]}</span>${n ? `<button type="button" class="sn-rep${st.sim === id ? ' on' : ''}" data-bsim="${esc(id)}" aria-pressed="${st.sim === id}" title="กดเพื่อไฮไลต์กลุ่มงานที่พูดใกล้เคียงกัน">×${n + 1} กลุ่ม</button>` : ''}</div>
-    <p class="sn-body">${esc(e.body)}</p>
+    <p class="sn-body" title="${esc(e.body)}">${esc(e.body)}</p>
     <div class="sn-foot"><span class="chip" title="แหล่งที่มา: ${esc(e.wg)}">${esc(short(e.wg))}</span>${c ? `<span class="chip cl" title="ประเด็นรวม">${esc(c)}</span>` : ''}</div></article>`;
 }
 function cardHtml(c, b, m, cn, st, hot){
@@ -150,7 +150,7 @@ function html(ctx){
   else if (st.view === 'list') body = listHtml(fe, m, cn, st, hot);
   else body = buildCards(fe, st).map(({b, cs, empties, n, gs: g}) => { const shut = st.closed.has(b.id);
     return `<section class="board ${b.id}${shut ? ' shut' : ''}"><header class="board-h"><div><h2>${b.title}</h2><p>${b.sub}</p></div><div class="board-stat">${n} รายการ · ${g} กลุ่มงาน</div><button type="button" class="btn sm" data-bboard="${b.id}" aria-expanded="${!shut}">${shut ? 'ขยายกระดาน' : 'ย่อกระดาน'}</button></header>
-      ${shut ? '' : `${cs.length ? `<div class="bcards">${cs.map(c => cardHtml(c, b, m, cn, st, hot)).join('')}</div>` : '<p class="muted small bnone">ยังไม่มีรายการในกระดานนี้</p>'}${empties.length ? `<div class="bempties"><span class="be-t">หมวดที่ยังไม่มีรายการ (${empties.length})</span>${empties.map(f => `<span class="chip be" title="${esc(f.q)}">${esc(f.t)}</span>`).join('')}</div>` : ''}`}</section>`; }).join('');
+      ${shut ? '' : `${cs.length ? `<div class="bcards${cs.length === 1 ? ' single' : ''}">${cs.map(c => cardHtml(c, b, m, cn, st, hot)).join('')}</div>` : '<p class="muted small bnone">ยังไม่มีรายการในกระดานนี้</p>'}${empties.length ? `<div class="bempties"><span class="be-t">หมวดที่ยังไม่มีรายการ (${empties.length})</span>${empties.map(f => `<span class="chip be" title="${esc(f.q)}">${esc(f.t)}</span>`).join('')}</div>` : ''}`}</section>`; }).join('');
   return `<div class="board-wrap">${head}${strip}<div class="bmain"><div class="bboards">${body}</div>${insightHtml(fe, m, pool, cn)}</div></div>`;
 }
 

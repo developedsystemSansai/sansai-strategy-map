@@ -102,6 +102,7 @@ const short = g => String(g).replace(/^กลุ่มงาน/, '');
   // ข้อความยาวไม่ล้นการ์ด
   const css = require('fs').readFileSync(root + '/style.css', 'utf8');
   ok(/\.snote \.sn-body[^{]*\{[^}]*overflow-wrap:anywhere/.test(css) && /\.sn-foot \.chip\{[^}]*text-overflow:ellipsis/.test(css) && /\.bcard,\.snote[^{]*\{min-width:0\}/.test(css), 'CSS กันข้อความและชื่อกลุ่มงานยาวล้นการ์ด');
+  ok(/\.bcard,\.bnotes,\.snote:not\(\.row\)[^{]*\{grid-template-columns:minmax\(0,1fr\)\}/.test(css), 'CSS ล็อกความกว้างช่องกริดของการ์ดและโน้ต (ป้องกันเนื้อหาดันการ์ดล้นขอบ)');
   // ฟังก์ชันเดิมไม่เสีย
   click($('[data-atab="swot"]')); await sleep(300); ok($$('.swx .card').length === 4 && !!$('.frbar'), 'หน้าสำรวจ SWOT เดิมยังทำงานปกติ');
   // Empty state ทั้งกระดาน

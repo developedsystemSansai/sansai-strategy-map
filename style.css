@@ -680,3 +680,26 @@ details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-siz
 .snote .sn-body,.in-li,.bsel b,.bcard h3{overflow-wrap:anywhere;word-break:break-word}
 .sn-foot .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
 .snote.row .chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:top}
+
+/* ---- ปรับให้พอดี: แก้ช่องกริดที่ขยายตามเนื้อหาจนการ์ด/โน้ตล้นขอบ ---- */
+.board-wrap,.bmain>*,.bboards,.board{min-width:0}
+.bcards{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.bcard,.bnotes,.snote:not(.row),.in-sec,.in-blk{grid-template-columns:minmax(0,1fr)}
+.bcard>*,.snote>*{min-width:0}
+.snote:not(.row) .sn-body{-webkit-line-clamp:3}
+.sn-foot{min-width:0}
+.sn-foot .chip{font-size:12px;padding:0 8px;line-height:1.55;max-width:100%}
+.sn-foot .chip.cl{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.bmeta{min-width:0}
+
+@media (max-width:700px){
+  .bfilters .seg{display:flex;flex-wrap:wrap;width:100%}
+  .bfilters .seg button{flex:1 1 auto;white-space:nowrap}
+  .bstats b{font-size:22px}
+  .bhead{padding:12px}
+  .board{padding:10px}
+}
+
+/* การ์ดใบเดียวในกระดาน (เช่นตอนยังไม่มีใครระบุหมวด) ขยายเต็มความกว้างและจัดโน้ตเป็นหลายคอลัมน์ ไม่ทิ้งที่ว่างครึ่งจอ */
+.bcards.single{grid-template-columns:minmax(0,1fr)}
+.bcards.single .bnotes{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));align-items:start}
