@@ -584,3 +584,89 @@ details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-siz
 .chip.fr.on small{color:#d6efeb}
 .chip.frame{border-style:dashed;color:var(--muted)}
 @media print{.aid{display:none}}
+
+/* ---- Strategic Analysis Board (7S + PESTEL) ---- */
+.board-wrap{display:grid;gap:14px}
+.bhead{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px}
+.bh-top{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.bh-top>div:first-child{flex:1;min-width:16rem}
+.bh-title{margin:0 0 2px}
+.bh-exp{display:flex;gap:8px;flex-wrap:wrap}
+.bstats{display:flex;gap:26px;flex-wrap:wrap}
+.bstats div{display:grid}
+.bstats b{font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums}
+.bstats span{color:var(--muted);font-size:13px}
+.bfilters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bfilters .select,.bfilters .input{width:auto;min-width:11rem;max-width:100%}
+.bfilters .input[type=search]{min-width:14rem}
+.bsel{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#fffbea;border:1px solid #f1d27c;border-radius:var(--r);padding:10px 14px}
+.bsel span:not(.pill){color:var(--muted);font-size:14px}
+.bmain{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+.bboards{display:grid;gap:14px;min-width:0}
+.board{border-radius:14px;padding:14px;border:1px solid}
+.board.in{background:#eef4ff;border-color:#bcd0f5}
+.board.ex{background:#fff6e0;border-color:#f1d27c}
+.board-h{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.board-h>div:first-child{flex:1;min-width:14rem}
+.board-h h2{margin:0;font-size:19px}
+.board-h p{margin:0;color:var(--muted);font-size:13.5px}
+.board.in .board-h h2{color:#1e3a8a}
+.board.ex .board-h h2{color:#b45309}
+.board-stat{font-size:13.5px;color:var(--muted)}
+.board.shut{padding-bottom:10px}
+.board.shut .board-h{margin-bottom:0}
+.bcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.bcard{background:#fff;border-radius:12px;padding:12px;border:1px solid var(--line);box-shadow:0 1px 2px rgba(20,48,43,.06);display:grid;gap:8px;align-content:start}
+.bcard>header{display:flex;gap:8px;align-items:flex-start}
+.bcard>header>div{flex:1}
+.bcard h3{margin:0;font-size:15.5px;line-height:1.35}
+.bcard h3 small{color:var(--muted);font-weight:400;font-size:12px}
+.bcard.in h3{color:#1e3a8a}.bcard.ex h3{color:#b45309}
+.bcard.none h3{color:var(--muted)}
+.bcard.none{border-style:dashed;background:#fbfcfc}
+.bcount{min-width:28px;height:28px;border-radius:99px;display:grid;place-items:center;color:#fff;font-weight:600;font-size:14px;padding:0 8px}
+.bcard.in .bcount{background:#1e3a8a}.bcard.ex .bcount{background:#b45309}.bcard.none .bcount{background:#8a9a96}
+.bmeta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.bk{border-radius:99px;padding:0 9px;font-weight:600;background:#eef2f1;color:var(--ink)}
+.bk.S{background:#d1fae5;color:#065f46}.bk.W{background:#fee2e2;color:#991b1b}.bk.O{background:#dbeafe;color:#1e40af}.bk.T{background:#fef3c7;color:#92400e}
+.bk.rep{background:#ede9fe;color:#5b21b6}
+.bnotes{display:grid;gap:8px}
+.bempty{margin:0}
+.snote{border-radius:9px;padding:9px 10px;display:grid;gap:5px;cursor:pointer;border:1px solid;transition:box-shadow .15s,transform .15s}
+.bcard.in .snote,.snote.row.S,.snote.row.W{background:#e8f0ff;border-color:#bcd0f5}
+.bcard.ex .snote,.snote.row.O,.snote.row.T{background:#fff1c9;border-color:#efd07a}
+.snote:hover{box-shadow:0 3px 10px rgba(20,48,43,.14)}
+.snote:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+.snote.hl,.snote.sel{box-shadow:0 0 0 2px var(--pri)}
+.snote.sim{box-shadow:0 0 0 2px #7c3aed}
+.sn-top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sn-body{margin:0;font-size:14.5px;line-height:1.5;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.sn-foot{display:flex;gap:5px;flex-wrap:wrap}
+.sn-rep{border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:99px;padding:0 9px;font-size:12.5px;font-weight:600;cursor:pointer}
+.sn-rep.on{background:#7c3aed;border-color:#7c3aed;color:#fff}
+.chip.cl{background:#f0fdfa;border-color:#99f6e4;color:#0f766e}
+.bmore{justify-self:start}
+.blist{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.bl-h,.snote.row{display:grid;grid-template-columns:8.5rem minmax(0,1fr) 11rem 12rem 8rem;gap:10px;align-items:start;padding:9px 12px}
+.bl-h{font-size:13px;font-weight:600;color:var(--muted);background:#f6f9f8;border-bottom:1px solid var(--line)}
+.snote.row{border-radius:0;border:0;border-bottom:1px solid var(--line-2);box-shadow:none;background:#fff;grid-template-columns:8.5rem minmax(0,1fr) 11rem 12rem 8rem}
+.snote.row:hover{background:#f6faf9}
+.snote.row.sim{background:#f5f3ff}.snote.row.sel{background:#fffbea}
+.snote.row .sn-body{-webkit-line-clamp:3}
+.binsight{display:grid;gap:12px;position:sticky;top:76px;max-height:calc(100vh - 92px);overflow:auto}
+.in-sec{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:10px}
+.in-sec h3{margin:0;font-size:15.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 9px}
+.tag.fact{background:#dcfce7;color:#14532d}
+.tag.hint{background:#fef3c7;color:#92400e}
+.in-sec.hints{background:#fffdf5;border-style:dashed}
+.in-blk h4{margin:0 0 4px;font-size:13.5px;display:flex;gap:6px;align-items:center}
+.in-blk ul,.in-blk ol{margin:0;padding-left:1.15rem;display:grid;gap:5px}
+.in-blk li{font-size:14px}
+.in-blk li small{display:block;color:var(--muted);font-size:12.5px}
+.in-li{cursor:pointer;border-radius:6px}
+.in-li:hover{background:#f1f7f5}
+.in-hints{margin:0;padding-left:1.15rem;display:grid;gap:7px;font-size:14px}
+@media (max-width:1100px){.bmain{grid-template-columns:1fr}.binsight{position:static;max-height:none}}
+@media (max-width:700px){.bl-h{display:none}.snote.row{grid-template-columns:1fr;gap:4px}.bfilters .select,.bfilters .input{width:100%}.bstats{gap:16px}}
+@media print{.board-wrap{display:none}}

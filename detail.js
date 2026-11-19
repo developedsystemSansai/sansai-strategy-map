@@ -151,7 +151,7 @@ function close(){ if (!drawer || drawer.hidden) return; drawer.hidden = true; dr
 function highlight(sel, scroll){
   const pane = document.getElementById('pane'); if (!pane) return;
   pane.classList.toggle('hl-on', !!sel); let first = null;
-  pane.querySelectorAll('.li[data-oe]').forEach(li => {
+  pane.querySelectorAll('.li[data-oe], .snote[data-oe]').forEach(li => {
     const on = !!sel && (sel.t === 'e' ? li.dataset.oe === String(sel.id) : sel.t === 'g' ? li.dataset.wg === sel.id : li.dataset.cid === sel.id);
     li.classList.toggle('hl', on); if (on && !first) first = li;
   });
@@ -169,7 +169,7 @@ document.addEventListener('click', ev => {
 });
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && drawer && !drawer.hidden){ close(); return; }
-  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target instanceof Element && ev.target.matches('.li[data-oe]')){ ev.preventDefault(); open({t: 'e', id: ev.target.dataset.oe}); }
+  if ((ev.key === 'Enter' || ev.key === ' ') && ev.target instanceof Element && ev.target.matches('.li[data-oe], .snote[data-oe], .in-li[data-oe]')){ ev.preventDefault(); open({t: 'e', id: ev.target.dataset.oe}); }
 });
 
 window.SXD = {render, open, close, refresh, highlight, sim, similar, eid, setProvider: f => { provider = f; }};

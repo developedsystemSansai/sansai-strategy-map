@@ -20,7 +20,7 @@ let G = null, A = null, kseq = 0, loginErr = '', loginMode = 'group', draft = {w
 const viewSw = (cur, attr) => `<span class="seg" role="group" aria-label="รูปแบบการแสดงผล">${[['graph','แผนผังกราฟ'],['list','รายการ']].map(([v, t]) => `<button type="button" class="${cur === v ? 'on' : ''}" ${attr}="${v}" aria-pressed="${cur === v}">${t}</button>`).join('')}</span>`;
 const thSort = (a, b) => a.localeCompare(b, 'th');
 const mas = (n, h = 110) => `<img class="mascot" src="assets/mascot/${n}.webp" alt="" height="${h}" loading="lazy" decoding="async">`;
-const TICON = {fill: 'raise', map: 'path', peer: 'search', vote: 'target', over: 'dashboard', all: 'guide', swot: 'swot', group: 'people', exp: 'export'};
+const TICON = {fill: 'raise', map: 'path', peer: 'search', vote: 'target', over: 'dashboard', all: 'guide', swot: 'swot', group: 'people', exp: 'export', board: 'growth'};
 const stepIc = n => `<img class="stepic" src="assets/icons/${n}.webp" alt="" width="40" height="40" loading="lazy" decoding="async">`;
 const eidOf = e => e.id != null ? String(e.id) : e.wg + '|' + e.body;
 const liAttr = e => `data-oe="${esc(eidOf(e))}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด"`;
@@ -306,7 +306,7 @@ const adminApi = () => ({
 /* บอกแผงรายละเอียดว่าตอนนี้หน้ารายการแสดงข้อมูลชุดไหนอยู่ (ถ้าไม่ได้อยู่หน้ารายการ จะไม่เปิดแผง) */
 if (window.SXD) SXD.setProvider(() => {
   if (!session) return null;
-  if (session.role === 'admin' && A && A.d && A.tab === 'swot') return {entries: A.d.entries, clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: '', admin: adminApi()};
+  if (session.role === 'admin' && A && A.d && (A.tab === 'swot' || A.tab === 'board')) return {entries: A.d.entries, clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: '', admin: adminApi()};
   if (session.role === 'admin' && A && A.d && A.tab === 'all' && A.view === 'list') return {entries: filteredEntries(), clusters: A.d.clusters, done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), own: '', admin: adminApi()};
   if (session.role === 'group' && G && G.tab === 'peer' && G.peer.loaded && G.peer.view === 'list') return {entries: peerList(), clusters: G.peer.clusters, done: new Set(G.peer.done.map(x => x.wg)), own: session.wg, admin: null};
   return null;
@@ -438,7 +438,7 @@ function peerView(){
 }
 
 /* ---------- ทีมยุทธศาสตร์ ---------- */
-const ATABS = [['map','แผนที่ยุทธศาสตร์'],['over','ภาพรวมการส่ง'],['all','ข้อมูลทั้งหมด'],['swot','สำรวจ SWOT'],['group','จัดกลุ่มประเด็น'],['vote','โหวตและจัดลำดับ'],['exp','ส่งออกและพิมพ์']];
+const ATABS = [['map','แผนที่ยุทธศาสตร์'],['over','ภาพรวมการส่ง'],['all','ข้อมูลทั้งหมด'],['swot','สำรวจ SWOT'],['board','Strategic Board'],['group','จัดกลุ่มประเด็น'],['vote','โหวตและจัดลำดับ'],['exp','ส่งออกและพิมพ์']];
 async function enterAdmin(){
   A = {d: null, tab: 'map', view: 'graph', f: {wg: '', kind: '', q: '', cl: ''}, sw: {mode: 'matrix', wg: '', cl: '', q: '', sort: 'wg', open: new Set()}, sel: new Set(), pk: new Set(['ISSUE','IDEA']), onlyFree: true, newName: '', at: null};
   shell(whoHtml()); view(loading('กำลังโหลดข้อมูลภาพรวม…'));
@@ -527,6 +527,16 @@ function swotView(){
   return SXS.html({all: A.d.entries, clusters: A.d.clusters, groups: allGroups(), st: A.sw});
 }
 
+/* Strategic Analysis Board (7S + PESTEL) — โมดูล board.js อ่านข้อมูลจริงชุดเดียวกับหน้าสำรวจ SWOT */
+function boardCtx(){
+  A.bd = A.bd || SXB.initState();
+  return {all: A.d.entries, clusters: A.d.clusters, groups: allGroups(), done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), st: A.bd, mas,
+    tools: {download, toCSV, toast, print: h => { $('#printArea').innerHTML = h; setTimeout(() => window.print(), 80); }}};
+}
+function boardView(){
+  if (!window.SXB) return '<div class="empty">โหลดโมดูล Strategic Board ไม่สำเร็จ ลองรีเฟรชหน้า</div>';
+  return SXB.html(boardCtx());
+}
 function groupTabView(){
   const d = A.d, st = clStats();
   const pool = d.entries.filter(e => A.pk.has(e.kind) && (!A.onlyFree || !e.cluster_id)).sort((a, b) => b.priority - a.priority || a.wg.localeCompare(b.wg, 'th'));
@@ -598,7 +608,7 @@ function expView(){
     <div class="card"><div><b>สรุปสำหรับพิมพ์</b><p class="muted small">อันดับประเด็น พร้อม SWOT ประเด็น และข้อเสนอ</p></div><button class="btn" data-exp="print">${ico('print')}พิมพ์ / บันทึกเป็น PDF</button></div></div>`;
 }
 function renderAdmin(){
-  const body = A.tab === 'map' ? '<div id="smbHost"></div>' : {over: overView, all: allView, swot: swotView, group: groupTabView, vote: voteTabView, exp: expView}[A.tab]();
+  const body = A.tab === 'map' ? '<div id="smbHost"></div>' : {over: overView, all: allView, swot: swotView, board: boardView, group: groupTabView, vote: voteTabView, exp: expView}[A.tab]();
   const open = A.d.settings.voting_open === '1';
   setTabs(ATABS, A.tab, 'data-atab', {vote: open ? '<span class="live">เปิดอยู่</span>' : ''});
   view(`<div class="wrap"><h2>ภาพรวมของทีมยุทธศาสตร์</h2>
@@ -615,6 +625,7 @@ async function aCall(fn, body, okMsg){
 }
 function adminClick(t){
   const tab = t.closest('[data-atab]'); if (tab){ A.tab = tab.dataset.atab; return renderAdmin(); }
+  if (A.tab === 'board' && window.SXB){ const r = SXB.click(t, boardCtx().st, boardCtx()); if (r) return r === 'render' ? renderAdmin() : undefined; }
   const av = t.closest('[data-aview]'); if (av){ A.view = av.dataset.aview; return renderAdmin(); }
   const sm = t.closest('[data-smode]'); if (sm){ A.sw.mode = sm.dataset.smode; return renderAdmin(); }
   const sx = t.closest('[data-swx]'); if (sx){ const id = sx.dataset.swx; A.sw.open.has(id) ? A.sw.open.delete(id) : A.sw.open.add(id); return renderAdmin(); }
@@ -652,6 +663,7 @@ function adminClick(t){
 }
 function adminChange(t){
   if (t.dataset.sel){ t.checked ? A.sel.add(t.dataset.sel) : A.sel.delete(t.dataset.sel); if (A.simSort) return renderAdmin(); const c = $('.act .muted'); if (c) c.textContent = 'เลือก ' + A.sel.size; $$('[data-move],[data-newcl]').forEach(b => b.disabled = !A.sel.size); return; }
+  if (t.dataset.bf && t.dataset.bf !== 'q' && window.SXB){ boardCtx().st[t.dataset.bf] = t.value; return renderAdmin(); }
   if (t.dataset.f){ A.f[t.dataset.f] = t.value; return renderAdmin(); }
   if (t.dataset.sf && t.dataset.sf !== 'q'){ A.sw[t.dataset.sf] = t.value; return renderAdmin(); }
   const cl = t.closest('.cl');
@@ -685,6 +697,7 @@ document.addEventListener('input', e => {
     if (t.dataset.pf === 'q'){ clearTimeout(qT); const v = t.value; qT = setTimeout(() => { G.peer.f.q = v; renderGroup(); const x = $('[data-pf=q]'); if (x){ x.focus(); x.setSelectionRange(v.length, v.length); } }, 300); return; }
     groupInput(t); }
   else if (A && t.matches('[data-newname]')) A.newName = t.value;
+  else if (A && t.dataset.bf === 'q' && window.SXB){ clearTimeout(qT); const v = t.value; qT = setTimeout(() => { boardCtx().st.q = v; renderAdmin(); const q = $('[data-bf=q]'); if (q){ q.focus(); q.setSelectionRange(v.length, v.length); } }, 300); }
   else if (A && t.dataset.sf === 'q'){ clearTimeout(qT); const v = t.value; qT = setTimeout(() => { A.sw.q = v; renderAdmin(); const q = $('[data-sf=q]'); if (q){ q.focus(); q.setSelectionRange(v.length, v.length); } }, 300); }
   else if (A && t.dataset.f === 'q'){ clearTimeout(qT); const v = t.value; qT = setTimeout(() => { A.f.q = v; renderAdmin(); const q = $('[data-f=q]'); if (q){ q.focus(); q.setSelectionRange(v.length, v.length); } }, 300); }
 });
