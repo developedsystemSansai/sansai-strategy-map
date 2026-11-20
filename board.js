@@ -60,8 +60,8 @@ function buildCards(fe, st){
 function noteHtml(e, m, cn, st, hot){
   const n = breadthOf(m, e), c = e.cluster_id ? cn(e.cluster_id) : '', id = eid(e);
   const cls = ['snote', e.kind, hot.has(id) ? 'sim' : '', st.sim === id ? 'sel' : ''].filter(Boolean).join(' ');
-  return `<article class="${cls}" data-oe="${esc(id)}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด ${esc(KL[e.kind])} จาก ${esc(short(e.wg))}">
-    <div class="sn-top"><span class="pill ${e.kind}">${e.kind} · ${KL[e.kind]}</span>${n ? `<button type="button" class="sn-rep${st.sim === id ? ' on' : ''}" data-bsim="${esc(id)}" aria-pressed="${st.sim === id}" title="กดเพื่อไฮไลต์กลุ่มงานที่พูดใกล้เคียงกัน">×${n + 1} กลุ่ม</button>` : ''}</div>
+  return `<article class="${cls}" draggable="true" data-oe="${esc(id)}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด ${esc(KL[e.kind])} จาก ${esc(short(e.wg))}">
+    <div class="sn-top"><span class="pill ${e.kind}">${e.kind} · ${KL[e.kind]}</span>${n ? `<button type="button" class="sn-rep${st.sim === id ? ' on' : ''}" data-bsim="${esc(id)}" aria-pressed="${st.sim === id}" title="กดเพื่อไฮไลต์กลุ่มงานที่พูดใกล้เคียงกัน">×${n + 1} กลุ่ม</button>` : ''}${mvBtn(id)}</div>
     <p class="sn-body" title="${esc(e.body)}">${esc(e.body)}</p>
     <div class="sn-foot"><span class="chip" title="แหล่งที่มา: ${esc(e.wg)}">${esc(short(e.wg))}</span>${c ? `<span class="chip cl" title="ประเด็นรวม">${esc(c)}</span>` : ''}</div></article>`;
 }
@@ -69,7 +69,7 @@ function cardHtml(c, b, m, cn, st, hot){
   const es = c.es.slice().sort(sorter(st, m)), n = es.length, open = st.openAll || st.open.has(c.key);
   const cnt = k => es.filter(e => e.kind === k).length, gs = new Set(es.map(e => e.wg)).size, rep = es.filter(e => breadthOf(m, e) > 0).length;
   const shown = open ? es : es.slice(0, PREVIEW), title = c.f ? c.f.t : b.none;
-  return `<section class="bcard ${b.id}${c.f ? '' : ' none'}" data-bcardkey="${esc(c.key)}">
+  return `<section class="bcard ${b.id}${c.f ? '' : ' none'}" data-bcardkey="${esc(c.key)}" data-bdrop="${c.f ? 'frame:' + esc(c.f.k) : 'none:' + b.id}">
     <header title="${c.f ? esc(c.f.q) : 'รายการที่ผู้กรอกไม่ได้เลือกหมวด (ไม่บังคับ)'}"><div><h3>${esc(title)}${c.f ? ` <small>${esc(c.f.en)}</small>` : ''}</h3></div><span class="bcount" aria-label="${n} รายการ">${n}</span></header>
     <div class="bmeta">${b.kinds.map(k => `<span class="bk ${k}">${k} ${cnt(k)}</span>`).join('')}<span>จาก ${gs} กลุ่มงาน</span>${rep ? `<span class="bk rep">พบซ้ำ ${rep}</span>` : ''}</div>
     <div class="bnotes">${shown.map(e => noteHtml(e, m, cn, st, hot)).join('') || '<p class="muted small bempty">ยังไม่มีรายการในหมวดนี้</p>'}</div>
@@ -79,8 +79,8 @@ function listHtml(fe, m, cn, st, hot){
   const es = fe.slice().sort(sorter(st, m));
   return `<div class="blist" role="list"><div class="bl-h"><span>ประเภท</span><span>ข้อความ</span><span>หมวด</span><span>แหล่งที่มา</span><span>กลุ่มที่พูดตรงกัน</span></div>
     ${es.map(e => { const n = breadthOf(m, e), id = eid(e), fl = frLabel(e.frame);
-      return `<article class="snote row ${e.kind}${hot.has(id) ? ' sim' : ''}${st.sim === id ? ' sel' : ''}" role="listitem" data-oe="${esc(id)}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" aria-label="ดูรายละเอียด">
-      <span><span class="pill ${e.kind}">${e.kind} · ${KL[e.kind]}</span></span><span class="sn-body">${esc(e.body)}</span><span class="${fl ? '' : 'muted'}">${esc(fl || 'ยังไม่ระบุ')}</span>
+      return `<article class="snote row ${e.kind}${hot.has(id) ? ' sim' : ''}${st.sim === id ? ' sel' : ''}" draggable="true" role="listitem" data-oe="${esc(id)}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" aria-label="ดูรายละเอียด">
+      <span class="sn-top"><span class="pill ${e.kind}">${e.kind} · ${KL[e.kind]}</span>${mvBtn(id)}</span><span class="sn-body">${esc(e.body)}</span><span class="${fl ? '' : 'muted'}">${esc(fl || 'ยังไม่ระบุ')}</span>
       <span><span class="chip" title="${esc(e.wg)}">${esc(short(e.wg))}</span>${e.cluster_id ? `<span class="chip cl">${esc(cn(e.cluster_id))}</span>` : ''}</span>
       <span>${n ? `<button type="button" class="sn-rep${st.sim === id ? ' on' : ''}" data-bsim="${esc(id)}">×${n + 1} กลุ่ม</button>` : '<span class="muted">–</span>'}</span></article>`; }).join('')}</div>`;
 }
@@ -119,6 +119,7 @@ function insightHtml(fe, m, pool, cn){
 
 /* ---------- หน้าหลัก ---------- */
 function html(ctx){
+  ctxNow = ctx;
   const st = ctx.st, all = ctx.all, m = cons(all), cn = id => (ctx.clusters.find(c => c.id === id) || {}).name || '';
   const pool = only4(all), fe = filterList(all, st), total = pool.length;
   const hot = new Set(), selE = st.sim && pool.find(e => eid(e) === st.sim);
@@ -150,8 +151,9 @@ function html(ctx){
   else if (st.view === 'list') body = listHtml(fe, m, cn, st, hot);
   else body = buildCards(fe, st).map(({b, cs, empties, n, gs: g}) => { const shut = st.closed.has(b.id);
     return `<section class="board ${b.id}${shut ? ' shut' : ''}"><header class="board-h"><div><h2>${b.title}</h2><p>${b.sub}</p></div><div class="board-stat">${n} รายการ · ${g} กลุ่มงาน</div><button type="button" class="btn sm" data-bboard="${b.id}" aria-expanded="${!shut}">${shut ? 'ขยายกระดาน' : 'ย่อกระดาน'}</button></header>
-      ${shut ? '' : `${cs.length ? `<div class="bcards${cs.length === 1 ? ' single' : ''}">${cs.map(c => cardHtml(c, b, m, cn, st, hot)).join('')}</div>` : '<p class="muted small bnone">ยังไม่มีรายการในกระดานนี้</p>'}${empties.length ? `<div class="bempties"><span class="be-t">หมวดที่ยังไม่มีรายการ (${empties.length})</span>${empties.map(f => `<span class="chip be" title="${esc(f.q)}">${esc(f.t)}</span>`).join('')}</div>` : ''}`}</section>`; }).join('');
-  return `<div class="board-wrap">${head}${strip}<div class="bmain"><div class="bboards">${body}</div>${insightHtml(fe, m, pool, cn)}</div></div>`;
+      ${shut ? '' : `${cs.length ? `<div class="bcards${cs.length === 1 ? ' single' : ''}">${cs.map(c => cardHtml(c, b, m, cn, st, hot)).join('')}</div>` : '<p class="muted small bnone">ยังไม่มีรายการในกระดานนี้</p>'}${empties.length ? `<div class="bempties"><span class="be-t">หมวดที่ยังไม่มีรายการ (${empties.length})</span>${empties.map(f => `<span class="chip be" title="${esc(f.q)}" data-bdrop="frame:${esc(f.k)}">${esc(f.t)}</span>`).join('')}</div>` : ''}`}</section>`; }).join('');
+  const dock = `<div class="bdock" aria-hidden="true"><div class="bdock-in"><span class="bdock-t">ปล่อยเพื่อ</span>${ctx.clusters.map(c => `<span class="bdz" data-bdrop="cl:${esc(c.id)}">จัดเข้า “${esc(c.name)}” <small>${pool.filter(e => e.cluster_id === c.id).length}</small></span>`).join('')}<span class="bdz" data-bdrop="cl:">เอาออกจากประเด็น</span><span class="bdz" data-bdrop="clear">ล้างหมวด 7S/PESTEL</span></div></div>`;
+  return `<div class="board-wrap">${head}${strip}<div class="bmain"><div class="bboards">${body}</div>${insightHtml(fe, m, pool, cn)}</div>${dock}</div>`;
 }
 
 /* ---------- ส่งออก ---------- */
@@ -212,6 +214,7 @@ function png(all, ctx){
 function click(t, st, ctx){
   const g = a => t.closest('[' + a + ']');
   let x;
+  if ((x = g('data-bmove'))){ openMenu(ctx, x.dataset.bmove); return true; }
   if ((x = g('data-bsim'))){ const id = x.dataset.bsim; st.sim = st.sim === id ? '' : id; return 'render'; }
   if (g('data-bsimclear')){ st.sim = ''; return 'render'; }
   if (g('data-bempty')){ st.showEmpty = !st.showEmpty; return 'render'; }
@@ -227,5 +230,96 @@ function click(t, st, ctx){
     return true; }
   return false;
 }
-window.SXB = {initState, html, click, rows, svg, printHtml, filterList, insights, buildCards};
+
+/* ---------- ลากวาง / เมนูย้าย (ทีมยุทธศาสตร์) ----------
+   · ลากโน้ตไปวางที่การ์ดหมวด 7S/PESTEL (รวมชิปของหมวดที่ยังว่าง) เพื่อเปลี่ยนหมวด
+   · วางข้ามฝั่ง (ภายใน ↔ ภายนอก) ต้องเลือกประเภทใหม่ S/W หรือ O/T ให้ตรงความหมายก่อน
+   · ลากไปที่แถบด้านล่างขณะลาก เพื่อจัดเข้า/เอาออกจาก "ประเด็นรวม" หรือล้างหมวด
+   · ปุ่ม ⋮ บนทุกโน้ตทำสิ่งเดียวกันโดยไม่ต้องลาก (มือถือ/แป้นพิมพ์) · ทุกการย้ายมี "เลิกทำ"
+   · ไม่แก้ข้อความ ผู้กรอก หรือกลุ่มงานของรายการ ไม่รีเฟรชหน้าขณะกำลังลาก */
+let D = null, over = null, deferred = false, snackT = null, ctxNow = null;
+const sideOfKind = k => (k === 'S' || k === 'W') ? 'in' : 'ex';
+const sideOfFrame = k => (window.FR && FR.IN.some(f => f.k === k)) ? 'in' : 'ex';
+const findE = (ctx, id) => ctx.all.find(e => eid(e) === id);
+const mvBtn = id => `<button type="button" class="sn-mv" data-bmove="${esc(id)}" aria-label="ย้ายรายการนี้" title="ย้ายไปหมวดหรือประเด็นอื่น"><svg class="ic" aria-hidden="true"><use href="#i-more"/></svg></button>`;
+const isDragging = () => { if (D){ deferred = true; return true; } return false; };
+function closeModal(){ const m = document.getElementById('bmodal'); if (m) m.remove(); document.removeEventListener('keydown', escKey, true); }
+function escKey(ev){ if (ev.key === 'Escape') closeModal(); }
+function modal(title, sub, sections){
+  closeModal();
+  const m = document.createElement('div'); m.id = 'bmodal'; m.className = 'bmodal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', title);
+  m.innerHTML = `<div class="bm-box"><div class="bm-h"><b>${esc(title)}</b><button type="button" class="icon-btn" data-bmclose aria-label="ปิด">${ic('x')}</button></div>${sub ? `<p class="muted small bm-sub">${esc(sub)}</p>` : ''}<div class="bm-body">${sections.map((s, i) => `<div class="bm-sec"><h4>${esc(s.h)}</h4><div class="bm-list">${s.items.map((it, j) => `<button type="button" class="bm-it${it.cur ? ' cur' : ''}" data-i="${i}.${j}"${it.cur ? ' aria-current="true"' : ''}>${esc(it.t)}${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</button>`).join('')}</div></div>`).join('')}</div></div>`;
+  m.addEventListener('click', ev => { if (ev.target === m || ev.target.closest('[data-bmclose]')) return closeModal(); const b = ev.target.closest('[data-i]'); if (!b) return; const [i, j] = b.dataset.i.split('.').map(Number); closeModal(); sections[i].items[j].run(); });
+  document.body.appendChild(m); document.addEventListener('keydown', escKey, true);
+  const f = m.querySelector('.bm-it:not(.cur)') || m.querySelector('button'); if (f) f.focus();
+}
+function snack(msg, undo){
+  let s = document.getElementById('bsnack');
+  if (!s){ s = document.createElement('div'); s.id = 'bsnack'; s.className = 'bsnack'; s.setAttribute('role', 'status'); document.body.appendChild(s); }
+  s.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button type="button" class="btn sm">เลิกทำ</button>' : ''}`; s.classList.add('show');
+  const b = s.querySelector('button'); if (b) b.onclick = () => { s.classList.remove('show'); undo(); };
+  clearTimeout(snackT); snackT = setTimeout(() => s.classList.remove('show'), 9000);
+}
+function moveTo(ctx, e, kind, frame){
+  const id = eid(e), f = frame || null;
+  if (kind === e.kind && (e.frame || null) === f){ ctx.tools.toast('รายการอยู่ในตำแหน่งนี้แล้ว'); return Promise.resolve(); }
+  const label = f ? frLabel(f) : (sideOfKind(kind) === 'in' ? 'ยังไม่ระบุหมวด 7S' : 'ยังไม่ระบุหมวด PESTEL');
+  return ctx.tools.move(id, kind, f).then(prev => { if (prev) snack('ย้ายไป “' + label + '”' + (kind !== prev.kind ? ' และเปลี่ยนเป็น ' + KL[kind] : '') + ' แล้ว', () => ctx.tools.move(id, prev.kind, prev.frame)); });
+}
+function pickKind(ctx, e, side, frame){
+  const kinds = side === 'in' ? ['S', 'W'] : ['O', 'T'], short60 = e.body.length > 60 ? e.body.slice(0, 60) + '…' : e.body;
+  modal('ย้ายข้ามฝั่ง เลือกประเภทใหม่', `“${short60}” เป็น ${e.kind} ${KL[e.kind]} (ปัจจัย${side === 'in' ? 'ภายนอก' : 'ภายใน'}) ถ้าย้ายไปปัจจัย${side === 'in' ? 'ภายใน' : 'ภายนอก'} ต้องเลือกประเภทให้ตรงกับความหมาย`,
+    [{h: 'ประเภทใหม่', items: kinds.map(k => ({t: k + ' · ' + KL[k], hint: side === 'in' ? 'ปัจจัยภายใน (7S)' : 'ปัจจัยภายนอก (PESTEL)', run: () => moveTo(ctx, e, k, frame)}))}]);
+}
+function act(ctx, id, target){
+  const e = findE(ctx, id); if (!e) return Promise.resolve();
+  const i = target.indexOf(':'), type = i < 0 ? target : target.slice(0, i), val = i < 0 ? '' : target.slice(i + 1);
+  if (type === 'cl'){
+    const prev = e.cluster_id || null; if ((prev || '') === val){ ctx.tools.toast('รายการอยู่ในประเด็นนี้แล้ว'); return Promise.resolve(); }
+    const cname = val ? (ctx.clusters.find(c => c.id === val) || {}).name : '';
+    return ctx.tools.assign(id, val || null).then(ok => { if (ok) snack(val ? 'จัดเข้าประเด็น “' + cname + '” แล้ว' : 'เอาออกจากประเด็นแล้ว', () => ctx.tools.assign(id, prev)); });
+  }
+  if (type === 'clear') return moveTo(ctx, e, e.kind, null);
+  const side = type === 'frame' ? sideOfFrame(val) : val, frame = type === 'frame' ? val : null;
+  if (side === sideOfKind(e.kind)) return moveTo(ctx, e, e.kind, frame);
+  pickKind(ctx, e, side, frame); return Promise.resolve();
+}
+function openMenu(ctx, id){
+  const e = findE(ctx, id); if (!e || !window.FR) return;
+  const side = sideOfKind(e.kind), fl = side === 'in' ? FR.IN : FR.EX, same = side === 'in' ? ['S', 'W'] : ['O', 'T'], other = side === 'in' ? ['O', 'T'] : ['S', 'W'];
+  modal('ย้ายรายการ', e.kind + ' · ' + KL[e.kind] + ' · ' + short(e.wg) + ': ' + (e.body.length > 70 ? e.body.slice(0, 70) + '…' : e.body), [
+    {h: 'ย้ายไปหมวด ' + (side === 'in' ? '7S' : 'PESTEL'), items: [...fl.map(f => ({t: f.t, hint: f.en, cur: e.frame === f.k, run: () => moveTo(ctx, e, e.kind, f.k)})), {t: 'ยังไม่ระบุหมวด', cur: !e.frame, run: () => moveTo(ctx, e, e.kind, null)}]},
+    {h: 'เปลี่ยนประเภท', items: [...same.filter(k => k !== e.kind).map(k => ({t: 'เป็น ' + k + ' · ' + KL[k], hint: 'คงหมวดเดิม', run: () => moveTo(ctx, e, k, e.frame || null)})), ...other.map(k => ({t: 'เป็น ' + k + ' · ' + KL[k], hint: 'ย้ายไปอีกฝั่ง ล้างหมวดเดิม', run: () => moveTo(ctx, e, k, null)}))]},
+    {h: 'ประเด็นรวม', items: [...ctx.clusters.map(c => ({t: c.name, cur: e.cluster_id === c.id, run: () => act(ctx, id, 'cl:' + c.id)})), {t: 'ยังไม่จัดเข้าประเด็น', cur: !e.cluster_id, run: () => act(ctx, id, 'cl:')}]}]);
+}
+const wrapEl = () => document.querySelector('.board-wrap');
+const zoneSide = z => { const t = z.dataset.bdrop; return t.indexOf('frame:') === 0 ? sideOfFrame(t.slice(6)) : t.indexOf('none:') === 0 ? t.slice(5) : 'any'; };
+function endDrag(){
+  D = null; over = null; const w = wrapEl();
+  if (w){ w.classList.remove('dnd'); w.querySelectorAll('.dragging,.over,.z-ok,.z-x').forEach(n => n.classList.remove('dragging', 'over', 'z-ok', 'z-x')); }
+  if (deferred){ deferred = false; if (ctxNow && ctxNow.tools.render) ctxNow.tools.render(); }
+}
+document.addEventListener('dragstart', ev => {
+  const n = ev.target.closest && ev.target.closest('.snote[data-oe][draggable="true"]'); if (!n || !n.closest('.board-wrap') || !ctxNow) return;
+  const e = findE(ctxNow, n.dataset.oe); if (!e) return;
+  D = {id: n.dataset.oe, side: sideOfKind(e.kind)};
+  try { ev.dataTransfer.setData('text/plain', 'sx:' + D.id); ev.dataTransfer.effectAllowed = 'move'; } catch(_) {}
+  const w = wrapEl(); w.classList.add('dnd'); n.classList.add('dragging');
+  w.querySelectorAll('[data-bdrop]').forEach(z => { const s = zoneSide(z); z.classList.add(s === 'any' || s === D.side ? 'z-ok' : 'z-x'); });
+});
+document.addEventListener('dragover', ev => {
+  if (!D) return; const z = ev.target.closest && ev.target.closest('[data-bdrop]'); if (!z) return;
+  ev.preventDefault(); try { ev.dataTransfer.dropEffect = 'move'; } catch(_) {}
+  if (over !== z){ if (over) over.classList.remove('over'); over = z; z.classList.add('over'); }
+});
+document.addEventListener('dragleave', ev => {
+  if (!D || !over) return; const z = ev.target.closest && ev.target.closest('[data-bdrop]');
+  if (z === over && !(ev.relatedTarget && over.contains(ev.relatedTarget))){ over.classList.remove('over'); over = null; }
+});
+document.addEventListener('drop', ev => {
+  if (!D) return; const z = ev.target.closest && ev.target.closest('[data-bdrop]'); if (!z) return;
+  ev.preventDefault(); const id = D.id, target = z.dataset.bdrop; endDrag(); act(ctxNow, id, target);
+});
+document.addEventListener('dragend', endDrag);
+window.SXB = {initState, html, click, rows, svg, printHtml, filterList, insights, buildCards, act, isDragging};
 })();

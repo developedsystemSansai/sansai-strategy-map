@@ -703,3 +703,47 @@ details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-siz
 /* การ์ดใบเดียวในกระดาน (เช่นตอนยังไม่มีใครระบุหมวด) ขยายเต็มความกว้างและจัดโน้ตเป็นหลายคอลัมน์ ไม่ทิ้งที่ว่างครึ่งจอ */
 .bcards.single{grid-template-columns:minmax(0,1fr)}
 .bcards.single .bnotes{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));align-items:start}
+
+/* ---- ลากวาง / เมนูย้าย บน Strategic Board ---- */
+.snote[draggable=true]{cursor:grab}
+.snote.dragging{opacity:.4;cursor:grabbing;transform:rotate(-1.5deg)}
+.sn-mv{margin-left:auto;display:inline-grid;place-items:center;width:26px;height:26px;border:0;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;opacity:0;transition:opacity .12s,background .12s}
+.sn-mv .ic{fill:currentColor;stroke:none;width:16px;height:16px}
+.snote:hover .sn-mv,.snote:focus-within .sn-mv,.sn-mv:focus-visible{opacity:1}
+.sn-mv:hover{background:rgba(20,48,43,.1);color:var(--ink)}
+@media (hover:none){.sn-mv{opacity:1}}
+.snote.row .sn-top{flex-wrap:nowrap}
+.board-wrap.dnd .z-ok{outline:2px dashed var(--pri);outline-offset:3px}
+.board-wrap.dnd .z-x{outline:2px dashed #94a3a0;outline-offset:3px}
+.board-wrap.dnd .bcard.z-ok.over,.board-wrap.dnd .chip.be.z-ok.over{outline-style:solid;background:#ecfdf5}
+.board-wrap.dnd .z-x.over{outline-style:solid;background:#f1f5f4}
+.board-wrap.dnd .chip.be.z-ok{border-color:var(--pri);color:var(--pri-d, var(--ink));background:#f4fbf9}
+.bdock{display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(20,48,43,.12);padding:10px 14px}
+.board-wrap.dnd .bdock{display:block}
+.bdock-in{display:flex;gap:8px;align-items:center;overflow-x:auto;max-width:1240px;margin:0 auto;padding-bottom:2px}
+.bdock-t{font-size:13px;color:var(--muted);white-space:nowrap}
+.bdz{flex:none;border:2px dashed var(--pri);border-radius:10px;padding:6px 12px;font-size:14px;background:#f4fbf9;white-space:nowrap}
+.bdz small{color:var(--muted)}
+.bdz.over{border-style:solid;background:#d1fae5}
+.bmodal{position:fixed;inset:0;z-index:60;background:rgba(20,48,43,.45);display:grid;place-items:center;padding:14px}
+.bm-box{background:#fff;border-radius:14px;width:min(520px,100%);max-height:min(80vh,680px);display:grid;grid-template-rows:auto auto minmax(0,1fr);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.bm-h{display:flex;align-items:center;gap:8px;padding:12px 14px 4px}
+.bm-h b{flex:1}
+.bm-sub{margin:0;padding:0 14px 8px}
+.bm-body{overflow:auto;padding:0 14px 14px;display:grid;gap:12px;align-content:start}
+.bm-sec h4{margin:6px 0;font-size:13.5px;color:var(--muted)}
+.bm-list{display:grid;gap:6px}
+.bm-it{display:grid;gap:1px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 12px;cursor:pointer;font-size:15px}
+.bm-it small{color:var(--muted);font-size:12.5px}
+.bm-it:hover{background:var(--pri-t)}
+.bm-it.cur{background:#f0f5f4;border-color:var(--pri);cursor:default}
+.bsnack{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:18px;z-index:70;background:var(--ink);color:#fff;border-radius:10px;padding:8px 10px 8px 16px;display:flex;gap:12px;align-items:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:92vw}
+.bsnack.show{opacity:1;transform:translateX(-50%);pointer-events:auto}
+.bsnack .btn{min-height:30px}
+@media (prefers-reduced-motion:reduce){.snote.dragging{transform:none}.bsnack{transition:none}}
+@media print{.bdock,.bmodal,.bsnack,.sn-mv{display:none}}
+/* แถบวางด้านล่าง: ขึ้นบรรทัดใหม่ให้เห็นทุกปลายทางพร้อมกัน (ขณะลากเลื่อนแนวนอนไม่สะดวก) */
+.bdock-in{flex-wrap:wrap;overflow-x:visible;overflow-y:auto;max-height:36vh}
+.bdz{max-width:100%;overflow:hidden;text-overflow:ellipsis;padding:5px 11px;font-size:13.5px}
+.bdock-t{flex-basis:100%;font-size:12.5px}
+@media (min-width:900px){.bdock-t{flex-basis:auto}}

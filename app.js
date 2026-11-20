@@ -445,6 +445,7 @@ async function enterAdmin(){
   if (!await loadAdmin()) return;
   renderAdmin();
   A.poll = setInterval(async () => {
+    if (window.SXB && SXB.isDragging()) return;           // ไม่รีเฟรชหน้าขณะกำลังลากโน้ต
     const act = document.activeElement;
     if (act && /TEXTAREA|SELECT|INPUT/.test(act.tagName)) return;
     if (await loadAdmin(true)){ if (A.tab === 'map') setTabs(ATABS, A.tab, 'data-atab', {vote: A.d.settings.voting_open === '1' ? '<span class="live">เปิดอยู่</span>' : ''}); else renderAdmin(); }
@@ -531,7 +532,23 @@ function swotView(){
 function boardCtx(){
   A.bd = A.bd || SXB.initState();
   return {all: A.d.entries, clusters: A.d.clusters, groups: allGroups(), done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), st: A.bd, mas,
-    tools: {download, toCSV, toast, print: h => { $('#printArea').innerHTML = h; setTimeout(() => window.print(), 80); }}};
+    tools: {download, toCSV, toast, move: boardMove, assign: boardAssign, render: renderAdmin, print: h => { $('#printArea').innerHTML = h; setTimeout(() => window.print(), 80); }}};
+}
+/* ลากวางบน Strategic Board: อัปเดตหน้าจอทันที แล้วบันทึก ถ้าบันทึกไม่สำเร็จจะย้อนกลับและแจ้งเตือน */
+async function boardMove(id, kind, frame){
+  const e = A.d.entries.find(x => String(x.id) === String(id)); if (!e) return null;
+  const prev = {kind: e.kind, frame: e.frame || null, updated_at: e.updated_at};
+  e.kind = kind; e.frame = frame || null; e.updated_at = new Date().toISOString(); renderAdmin();
+  try { await rpc('sx_admin_move_entry', {p_pass: session.pass, p_id: String(id), p_kind: kind, p_frame: frame || null}); return prev; }
+  catch(err){ if (err.auth){ logout('รหัสผ่านทีมยุทธศาสตร์ไม่ถูกต้องหรือถูกเปลี่ยนแล้ว'); return null; }
+    e.kind = prev.kind; e.frame = prev.frame; e.updated_at = prev.updated_at; renderAdmin(); toast(err.message); return null; }
+}
+async function boardAssign(id, cid){
+  const e = A.d.entries.find(x => String(x.id) === String(id)); if (!e) return false;
+  const prev = e.cluster_id || null; e.cluster_id = cid || null; renderAdmin();
+  try { await rpc('sx_admin_assign', {p_pass: session.pass, p_ids: [String(id)], p_cluster: cid || null}); return true; }
+  catch(err){ if (err.auth){ logout('รหัสผ่านทีมยุทธศาสตร์ไม่ถูกต้องหรือถูกเปลี่ยนแล้ว'); return false; }
+    e.cluster_id = prev; renderAdmin(); toast(err.message); return false; }
 }
 function boardView(){
   if (!window.SXB) return '<div class="empty">โหลดโมดูล Strategic Board ไม่สำเร็จ ลองรีเฟรชหน้า</div>';

@@ -194,6 +194,17 @@
         voters_total: Object.values(DB.voters).filter(m => sum(m) > 0).length
       };
     },
+    sx_admin_move_entry: a => {   // เหมือนฟังก์ชันจริงในฐานข้อมูล: ตรวจประเภท หมวด และฝั่งให้ตรงกัน แล้วคืนค่าเดิมสำหรับเลิกทำ
+      const e = DB.entries.find(x => x.id === a.p_id); if (!e) throw new Error('ไม่พบรายการ');
+      const ok4 = k => k === 'S' || k === 'W' || k === 'O' || k === 'T';
+      if (!ok4(e.kind) || !ok4(a.p_kind)) throw new Error('ย้ายได้เฉพาะรายการ S/W/O/T');
+      const f = (a.p_frame || '').trim() || null;
+      if (f){ const inn = FR.IN.some(x => x.k === f), ex = FR.EX.some(x => x.k === f);
+        if (!inn && !ex) throw new Error('หมวดไม่ถูกต้อง');
+        if ((a.p_kind === 'S' || a.p_kind === 'W') !== inn) throw new Error('หมวดไม่ตรงกับประเภท (S/W ใช้ 7S, O/T ใช้ PESTEL)'); }
+      const prev = {kind: e.kind, frame: e.frame || null}; e.kind = a.p_kind; e.frame = f; e.updated_at = now();
+      return {id: e.id, kind: e.kind, frame: e.frame, prev};
+    },
     sx_admin_assign: a => { (a.p_ids || []).forEach(id => { const e = DB.entries.find(x => x.id === id); if (e) e.cluster_id = a.p_cluster || null; }); return true; },
     sx_admin_save_cluster: a => {
       const p = a.p_cluster || {}; let c = p.id && DB.clusters.find(x => x.id === p.id);

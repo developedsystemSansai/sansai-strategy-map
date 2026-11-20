@@ -164,6 +164,7 @@ function refresh(){                                  // เรียกหลั
 }
 document.addEventListener('click', ev => {
   const t = ev.target; if (!(t instanceof Element) || !provider) return;
+  if (t.closest('[data-bmove],[data-bsim]')) return;          // ปุ่มย้าย/ไฮไลต์บนโน้ตไม่เปิดแผงรายละเอียด
   const n = t.closest('[data-oe],[data-og],[data-oc]'); if (!n || n.closest('.sxd') || !n.closest('#pane')) return;
   open(n.dataset.oe != null ? {t: 'e', id: n.dataset.oe} : n.dataset.og != null ? {t: 'g', id: n.dataset.og} : {t: 'c', id: n.dataset.oc});
 });
