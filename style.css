@@ -713,13 +713,13 @@ details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-siz
 .sn-mv:hover{background:rgba(20,48,43,.1);color:var(--ink)}
 @media (hover:none){.sn-mv{opacity:1}}
 .snote.row .sn-top{flex-wrap:nowrap}
-.board-wrap.dnd .z-ok{outline:2px dashed var(--pri);outline-offset:3px}
-.board-wrap.dnd .z-x{outline:2px dashed #94a3a0;outline-offset:3px}
-.board-wrap.dnd .bcard.z-ok.over,.board-wrap.dnd .chip.be.z-ok.over{outline-style:solid;background:#ecfdf5}
-.board-wrap.dnd .z-x.over{outline-style:solid;background:#f1f5f4}
-.board-wrap.dnd .chip.be.z-ok{border-color:var(--pri);color:var(--pri-d, var(--ink));background:#f4fbf9}
+[data-sxm].dnd .z-ok{outline:2px dashed var(--pri);outline-offset:3px}
+[data-sxm].dnd .z-x{outline:2px dashed #94a3a0;outline-offset:3px}
+[data-sxm].dnd .bcard.z-ok.over,[data-sxm].dnd .chip.be.z-ok.over{outline-style:solid;background:#ecfdf5}
+[data-sxm].dnd .z-x.over{outline-style:solid;background:#f1f5f4}
+[data-sxm].dnd .chip.be.z-ok{border-color:var(--pri);color:var(--pri-d, var(--ink));background:#f4fbf9}
 .bdock{display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(20,48,43,.12);padding:10px 14px}
-.board-wrap.dnd .bdock{display:block}
+[data-sxm].dnd .bdock{display:block}
 .bdock-in{display:flex;gap:8px;align-items:center;overflow-x:auto;max-width:1240px;margin:0 auto;padding-bottom:2px}
 .bdock-t{font-size:13px;color:var(--muted);white-space:nowrap}
 .bdz{flex:none;border:2px dashed var(--pri);border-radius:10px;padding:6px 12px;font-size:14px;background:#f4fbf9;white-space:nowrap}
@@ -747,3 +747,19 @@ details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-siz
 .bdz{max-width:100%;overflow:hidden;text-overflow:ellipsis;padding:5px 11px;font-size:13.5px}
 .bdock-t{flex-basis:100%;font-size:12.5px}
 @media (min-width:900px){.bdock-t{flex-basis:auto}}
+
+/* ---- ย้าย/แก้ไข/ลบ ในหน้าสำรวจ SWOT + แบบฟอร์มแก้ไข ---- */
+.li[draggable=true]{cursor:grab}
+.li.dragging{opacity:.4;transform:rotate(-1deg)}
+.li .meta{align-items:center}
+.li .sn-mv{margin-left:auto}
+.li:hover .sn-mv,.li:focus-within .sn-mv{opacity:1}
+.card.kind-drop,[data-sxm].dnd .card.z-ok{border-radius:var(--r)}
+[data-sxm].dnd .card.z-ok.over{outline-style:solid;background:#f4fbf9}
+.bm-it.danger{border-color:#f5b5b1;color:#991b1b}
+.bm-it.danger:hover{background:#fef2f2}
+.bm-form{display:grid;gap:10px;align-content:start}
+.bm-form label{display:grid;gap:4px;font-weight:500;font-size:14px}
+.bm-form textarea{width:100%;resize:vertical;font-weight:400}
+.bm-act{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+@media print{.li .sn-mv{display:none}}

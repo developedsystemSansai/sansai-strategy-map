@@ -194,6 +194,18 @@
         voters_total: Object.values(DB.voters).filter(m => sum(m) > 0).length
       };
     },
+    sx_admin_delete_entry: a => { const i = DB.entries.findIndex(x => x.id === a.p_id); if (i < 0) throw new Error('ไม่พบรายการ'); return DB.entries.splice(i, 1)[0]; },
+    sx_admin_restore_entry: a => {
+      const p = a.p_entry || {}; if (!p.id || !(p.wg || '').trim() || !(p.body || '').trim()) throw new Error('ข้อมูลรายการไม่ครบ');
+      if (!DB.entries.some(x => x.id === p.id)){ const e = Object.assign({}, p, {updated_at: now()}); if (e.cluster_id && !DB.clusters.some(c => c.id === e.cluster_id)) e.cluster_id = null; DB.entries.push(e); DB.entries.sort((x, y) => String(x.created_at).localeCompare(String(y.created_at))); }
+      return {id: p.id};
+    },
+    sx_admin_edit_entry: a => {
+      const e = DB.entries.find(x => x.id === a.p_id), body = (a.p_body || '').trim(), detail = (a.p_detail || '').trim();
+      if (!body) throw new Error('ข้อความว่าง'); if (body.length > 1000 || detail.length > 2000) throw new Error('ข้อความยาวเกินกำหนด'); if (!e) throw new Error('ไม่พบรายการ');
+      const prev = {body: e.body, detail: e.detail || ''}; e.body = body; e.detail = detail; e.updated_at = now();
+      return {id: e.id, body, detail, prev};
+    },
     sx_admin_move_entry: a => {   // เหมือนฟังก์ชันจริงในฐานข้อมูล: ตรวจประเภท หมวด และฝั่งให้ตรงกัน แล้วคืนค่าเดิมสำหรับเลิกทำ
       const e = DB.entries.find(x => x.id === a.p_id); if (!e) throw new Error('ไม่พบรายการ');
       const ok4 = k => k === 'S' || k === 'W' || k === 'O' || k === 'T';

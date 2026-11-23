@@ -22,6 +22,7 @@ const eid = e => e.id != null ? String(e.id) : e.wg + '|' + e.body;
 const thSort = (a, b) => String(a).localeCompare(String(b), 'th');
 const ic = n => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const only4 = es => es.filter(e => K4.indexOf(e.kind) >= 0);
+const mvBtn = id => window.SXM ? SXM.mvBtn(id) : '';   // ปุ่ม ⋮ (ย้าย/แก้ไข/ลบ) และการลากวาง อยู่ใน sxmove.js
 
 /* ---------- กรอง ---------- */
 function list(all, st){
@@ -48,11 +49,11 @@ function consensus(all){
 /* ---------- ชิ้นส่วน ---------- */
 function liHtml(e, m, cn){
   const n = m.get(eid(e)) || 0, c = e.cluster_id && cn(e.cluster_id);
-  return `<div class="li" data-oe="${esc(eid(e))}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด"><p>${esc(e.body)}</p>
-    <div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${e.frame && window.FR ? `<span class="chip frame" title="หมวดแนวคิด (ไม่บังคับ)">${esc(FR.label(e.frame))}</span>` : ''}${c ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(c)}</button>` : ''}${n ? `<span class="chip sim" title="ประมาณจากถ้อยคำที่คล้ายกัน ควรเปิดอ่านประกอบ">ถ้อยคำใกล้เคียงกับอีก ${n} กลุ่มงาน</span>` : ''}</div></div>`;
+  return `<div class="li" draggable="true" data-oe="${esc(eid(e))}" data-wg="${esc(e.wg)}" data-cid="${esc(e.cluster_id || '')}" tabindex="0" role="button" aria-label="ดูรายละเอียด"><p>${esc(e.body)}</p>
+    <div class="meta"><button type="button" class="chip" data-og="${esc(e.wg)}">${esc(short(e.wg))}</button>${e.frame && window.FR ? `<span class="chip frame" title="หมวดแนวคิด (ไม่บังคับ)">${esc(FR.label(e.frame))}</span>` : ''}${c ? `<button type="button" class="chip" data-oc="${esc(e.cluster_id)}">${esc(c)}</button>` : ''}${n ? `<span class="chip sim" title="ประมาณจากถ้อยคำที่คล้ายกัน ควรเปิดอ่านประกอบ">ถ้อยคำใกล้เคียงกับอีก ${n} กลุ่มงาน</span>` : ''}${mvBtn(eid(e))}</div></div>`;
 }
 function cellHtml(k, xs, m, cn){
-  return `<div class="card ${k}" role="group" aria-label="${KL[k]}"><h3><span class="pill ${k}">${KL[k]}</span><span class="count muted small">${xs.length}</span></h3>
+  return `<div class="card ${k}" role="group" aria-label="${KL[k]}" data-bdrop="kind:${k}"><h3><span class="pill ${k}">${KL[k]}</span><span class="count muted small">${xs.length}</span></h3>
     <div class="swx-list">${xs.map(e => liHtml(e, m, cn)).join('') || '<p class="muted small">ไม่มีรายการตามตัวกรอง</p>'}</div></div>`;
 }
 function sorter(st, m){
@@ -85,7 +86,7 @@ function matrixHtml(es, ctx, st){
   const m = consensus(ctx.all), cn = id => (ctx.clusters.find(c => c.id === id) || {}).name || '';
   const by = k => es.filter(e => e.kind === k).sort(sorter(st, m));
   const inn = by('S').length + by('W').length, out = by('O').length + by('T').length, gs = new Set(es.map(e => e.wg)).size;
-  return `<p class="muted small swx-note">ภายใน ${inn} รายการ · ภายนอก ${out} รายการ · จาก ${gs} กลุ่มงาน · คลิกรายการเพื่อดูรายละเอียดและจัดเข้าประเด็นรวม</p>
+  return `<p class="muted small swx-note">ภายใน ${inn} รายการ · ภายนอก ${out} รายการ · จาก ${gs} กลุ่มงาน · คลิกรายการเพื่อดูรายละเอียดและจัดเข้าประเด็นรวม · ลากไปวางช่อง S/W/O/T เพื่อเปลี่ยนประเภท หรือกด ⋮ เพื่อย้าย แก้ไข ลบ</p>
   <div class="swx">
     <span class="swx-c" aria-hidden="true"></span><span class="swx-h">ส่งเสริมเป้าหมาย</span><span class="swx-h">ขัดขวางเป้าหมาย</span>
     <span class="swx-r">ภายในองค์กร<small>กลุ่มงานจัดการเองได้</small></span>${cellHtml('S', by('S'), m, cn)}${cellHtml('W', by('W'), m, cn)}
@@ -122,7 +123,8 @@ function towsHtml(es, ctx, st){
 function html(ctx){
   const st = ctx.st, es = list(ctx.all, st), has = only4(ctx.all).length;
   if (!has) return '<div class="empty">ยังไม่มีกลุ่มงานใดกรอก SWOT เมื่อมีคนกรอก จะแสดงที่นี่</div>';
-  return toolbar(ctx, st, es.length) + frameBar(ctx, st) + (st.mode === 'tows' ? towsHtml(es, ctx, st) : matrixHtml(es, ctx, st));
+  if (window.SXM) SXM.use(ctx);
+  return `<div data-sxm>` + toolbar(ctx, st, es.length) + frameBar(ctx, st) + (st.mode === 'tows' ? towsHtml(es, ctx, st) : matrixHtml(es, ctx, st)) + (window.SXM ? SXM.dock(ctx, only4(ctx.all)) : '') + `</div>`;
 }
 function csvRows(all, clusters, st){
   const m = consensus(all), cn = id => (clusters.find(c => c.id === id) || {}).name || '';

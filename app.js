@@ -445,7 +445,7 @@ async function enterAdmin(){
   if (!await loadAdmin()) return;
   renderAdmin();
   A.poll = setInterval(async () => {
-    if (window.SXB && SXB.isDragging()) return;           // ไม่รีเฟรชหน้าขณะกำลังลากโน้ต
+    if (window.SXM && SXM.isDragging()) return;           // ไม่รีเฟรชหน้าขณะกำลังลากโน้ต/รายการ
     const act = document.activeElement;
     if (act && /TEXTAREA|SELECT|INPUT/.test(act.tagName)) return;
     if (await loadAdmin(true)){ if (A.tab === 'map') setTabs(ATABS, A.tab, 'data-atab', {vote: A.d.settings.voting_open === '1' ? '<span class="live">เปิดอยู่</span>' : ''}); else renderAdmin(); }
@@ -525,14 +525,39 @@ function allView(){
 
 function swotView(){
   if (!window.SXS) return '<div class="empty">โหลดโมดูลสำรวจ SWOT ไม่สำเร็จ ลองรีเฟรชหน้า</div>';
-  return SXS.html({all: A.d.entries, clusters: A.d.clusters, groups: allGroups(), st: A.sw});
+  return SXS.html({all: A.d.entries, clusters: A.d.clusters, groups: allGroups(), st: A.sw, tools: moveTools()});
 }
 
 /* Strategic Analysis Board (7S + PESTEL) — โมดูล board.js อ่านข้อมูลจริงชุดเดียวกับหน้าสำรวจ SWOT */
 function boardCtx(){
   A.bd = A.bd || SXB.initState();
   return {all: A.d.entries, clusters: A.d.clusters, groups: allGroups(), done: new Set(A.d.submissions.filter(x => x.done).map(x => x.wg)), st: A.bd, mas,
-    tools: {download, toCSV, toast, move: boardMove, assign: boardAssign, render: renderAdmin, print: h => { $('#printArea').innerHTML = h; setTimeout(() => window.print(), 80); }}};
+    tools: Object.assign(moveTools(), {download, toCSV, print: h => { $('#printArea').innerHTML = h; setTimeout(() => window.print(), 80); }})};
+}
+/* เครื่องมือย้าย/แก้ไข/ลบ รายการ (sxmove.js) ใช้ร่วมกันทั้งหน้าสำรวจ SWOT และ Strategic Board */
+function moveTools(){ return {toast, move: boardMove, assign: boardAssign, edit: entryEdit, del: entryDelete, restore: entryRestore, render: renderAdmin}; }
+function moveCtx(){ return {all: A.d.entries, clusters: A.d.clusters, tools: moveTools()}; }
+const entryById = id => A.d.entries.find(x => String(x.id) === String(id));
+async function entryEdit(id, body, detail){
+  const e = entryById(id); if (!e) return null;
+  const prev = {body: e.body, detail: e.detail || '', updated_at: e.updated_at};
+  e.body = body; e.detail = detail || ''; e.updated_at = new Date().toISOString(); renderAdmin();
+  try { await rpc('sx_admin_edit_entry', {p_pass: session.pass, p_id: String(id), p_body: body, p_detail: detail || ''}); return prev; }
+  catch(err){ if (err.auth){ logout('รหัสผ่านทีมยุทธศาสตร์ไม่ถูกต้องหรือถูกเปลี่ยนแล้ว'); return null; }
+    e.body = prev.body; e.detail = prev.detail; e.updated_at = prev.updated_at; renderAdmin(); toast(err.message); return null; }
+}
+async function entryDelete(id){
+  const i = A.d.entries.findIndex(x => String(x.id) === String(id)); if (i < 0) return null;
+  const row = A.d.entries[i]; A.d.entries.splice(i, 1); renderAdmin();
+  try { const r = await rpc('sx_admin_delete_entry', {p_pass: session.pass, p_id: String(id)}); return r || row; }
+  catch(err){ if (err.auth){ logout('รหัสผ่านทีมยุทธศาสตร์ไม่ถูกต้องหรือถูกเปลี่ยนแล้ว'); return null; }
+    A.d.entries.splice(i, 0, row); renderAdmin(); toast(err.message); return null; }
+}
+async function entryRestore(row){
+  try { await rpc('sx_admin_restore_entry', {p_pass: session.pass, p_entry: row}); }
+  catch(err){ if (err.auth) logout('รหัสผ่านทีมยุทธศาสตร์ไม่ถูกต้องหรือถูกเปลี่ยนแล้ว'); else toast(err.message); return false; }
+  if (!entryById(row.id)){ A.d.entries.push(row); A.d.entries.sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))); }
+  renderAdmin(); toast('กู้รายการกลับแล้ว'); return true;
 }
 /* ลากวางบน Strategic Board: อัปเดตหน้าจอทันที แล้วบันทึก ถ้าบันทึกไม่สำเร็จจะย้อนกลับและแจ้งเตือน */
 async function boardMove(id, kind, frame){
@@ -643,6 +668,7 @@ async function aCall(fn, body, okMsg){
 function adminClick(t){
   const tab = t.closest('[data-atab]'); if (tab){ A.tab = tab.dataset.atab; return renderAdmin(); }
   if (A.tab === 'board' && window.SXB){ const r = SXB.click(t, boardCtx().st, boardCtx()); if (r) return r === 'render' ? renderAdmin() : undefined; }
+  if (A.tab === 'swot' && window.SXM && SXM.click(t, moveCtx())) return;
   const av = t.closest('[data-aview]'); if (av){ A.view = av.dataset.aview; return renderAdmin(); }
   const sm = t.closest('[data-smode]'); if (sm){ A.sw.mode = sm.dataset.smode; return renderAdmin(); }
   const sx = t.closest('[data-swx]'); if (sx){ const id = sx.dataset.swx; A.sw.open.has(id) ? A.sw.open.delete(id) : A.sw.open.add(id); return renderAdmin(); }

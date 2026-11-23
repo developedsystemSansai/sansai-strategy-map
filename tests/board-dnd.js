@@ -74,7 +74,7 @@ const snackTxt = () => ($('#bsnack.show') || {textContent: ''}).textContent;
   click($('#bsnack button')); await idle();
   // ---- เมนู ⋮ ----
   click(note(id).querySelector('[data-bmove]')); await sleep(120);
-  ok(!!$('#bmodal') && $$('#bmodal .bm-sec').length === 3 && !!$('#bmodal [aria-current]') && (!$('#sxDrawer') || $('#sxDrawer').hidden), 'กด ⋮: เปิดเมนูย้าย 3 ส่วน (หมวด/ประเภท/ประเด็นรวม) และไม่เปิดแผงรายละเอียด');
+  ok(!!$('#bmodal') && $$('#bmodal .bm-sec').length === 4 && !!$('#bmodal [aria-current]') && (!$('#sxDrawer') || $('#sxDrawer').hidden), 'กด ⋮: เปิดเมนู 4 ส่วน (หมวด/ประเภท/ประเด็นรวม/จัดการรายการ) และไม่เปิดแผงรายละเอียด');
   click($$('#bmodal .bm-it').find(b => /อัตรากำลัง/.test(b.textContent))); await idle(); ok(entry(id).frame === 'staff' && !$('#bmodal'), 'เมนู ⋮: เลือกหมวดอัตรากำลัง ย้ายสำเร็จและเมนูปิด');
   click(note(id).querySelector('[data-bmove]')); await sleep(100); click($$('#bmodal .bm-it').find(b => /เป็น W/.test(b.textContent))); await idle();
   ok(entry(id).kind === 'W' && entry(id).frame === 'staff', 'เมนู ⋮: เปลี่ยนประเภท S → W คงหมวดเดิม');
@@ -88,7 +88,7 @@ const snackTxt = () => ($('#bsnack.show') || {textContent: ''}).textContent;
   const t = $$('.board-wrap .snote').find(n => n.dataset.oe !== id && JSON.parse(ev("JSON.stringify(A.d.entries.find(e => String(e.id) === '" + n.dataset.oe + "'))")).kind === 'T'); const tid = t.dataset.oe, tb = entry(tid);
   await dragDrop(tid, '[data-bdrop="frame:legal"]'); await sleep(200); ev('rpc = __r');
   ok(entry(tid).frame === tb.frame && /ทดสอบ/.test($('#toast').textContent), 'บันทึกไม่สำเร็จ: ย้อนกลับตำแหน่งเดิมและแจ้งข้อผิดพลาด');
-  ok(/SXB\.isDragging\(\)/.test(require('fs').readFileSync(root + '/app.js', 'utf8')), 'การรีเฟรชอัตโนมัติถูกพักขณะลาก');
+  ok(/SXM\.isDragging\(\)/.test(require('fs').readFileSync(root + '/app.js', 'utf8')), 'การรีเฟรชอัตโนมัติถูกพักขณะลาก');
   click($('[data-atab="swot"]')); await idle(); ok($$('.swx .card').length === 4, 'หน้าสำรวจ SWOT เดิมยังทำงานปกติ');
   ok(errs.length === 0, 'ไม่มี runtime error ' + errs.join(' | '));
   console.log(`\n== ${pass} passed, ${fail} failed ==`); process.exit(fail ? 1 : 0);
