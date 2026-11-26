@@ -74,7 +74,7 @@ function blank(){
           vision:'', mission:'', outcomes:'', financeBeside:false,
           themes:[], objectives:[], links:[]};
 }
-let S = blank(), dirty = false, step = 1, linkSrc = null, maps = [], E = null;
+let S = blank(), dirty = false, step = 1, linkSrc = null, selLink = null, maps = [], E = null;
 
 function setDirty(v = true){
   dirty = v; const sb = $('#smbSave'); if (sb) sb.classList.toggle('dirty', v);
@@ -108,7 +108,7 @@ var render = function(){
   renderTabs();
   $('#smbView').innerHTML = VIEWS[step]() + navBtns();
   if (READONLY) lock($('#smbView'));
-  if (step === 5) drawMap('#map5', {selected: linkSrc, onClick: READONLY ? (id => openObj(id)) : linkClick});
+  if (step === 5) drawMap('#map5', {selected: linkSrc, linkEdit: !READONLY, selLink, onLink: linkPick, onClick: READONLY ? (id => openObj(id)) : linkClick});
   if (step === 8) drawMap('#map8', {onClick: id => openObj(id)});
 }
 function navBtns(){
@@ -241,11 +241,11 @@ const VIEWS = {
       <div class="linklist">
         <div class="small muted" style="margin-bottom:4px">ลูกศรทั้งหมด ${S.links.length} เส้น</div>
         ${S.links.map((l, i) => { const a = objById(l.from), b = objById(l.to); if (!a || !b) return '';
-          return `<div class="linkitem"><span class="t"><b>${codes[a.id]}</b> ${esc(a.name)} <b style="color:var(--pri)">→</b> <b>${codes[b.id]}</b> ${esc(b.name)}</span><button class="btn sm ghost danger" data-act="delLink" data-i="${i}">✕</button></div>`; }).join('')}
+          return `<div class="linkitem${selLink === i ? ' sel' : ''}" data-i="${i}"><span class="t" data-act="pickLink" data-i="${i}" title="คลิกเพื่อดูลูกศรเส้นนี้บนแผนที่"><b>${codes[a.id]}</b> ${esc(a.name)} <b style="color:var(--pri)">→</b> <b>${codes[b.id]}</b> ${esc(b.name)}</span><button class="btn sm ghost danger" data-act="delLink" data-i="${i}" title="ลบลูกศรเส้นนี้" aria-label="ลบลูกศร ${codes[a.id]} ไป ${codes[b.id]}">✕</button></div>`; }).join('')}
       </div>
     </div>
     <div>
-      <div class="mode">${linkSrc ? `เลือกต้นทาง <b>${codes[linkSrc] || ''}</b> แล้ว — คลิกกล่องปลายทางบนแผนที่ (คลิกกล่องเดิมเพื่อยกเลิก)` : '<b>วิธีลัด:</b> คลิกกล่องต้นทาง (สาเหตุ) แล้วคลิกกล่องปลายทาง (ผลลัพธ์) เพื่อสร้างลูกศร'}</div>
+      <div class="mode">${linkSrc ? `เลือกต้นทาง <b>${codes[linkSrc] || ''}</b> แล้ว — คลิกกล่องปลายทางบนแผนที่ (คลิกกล่องเดิมเพื่อยกเลิก)` : '<b>วิธีลัด:</b> คลิกกล่องต้นทาง (สาเหตุ) แล้วคลิกกล่องปลายทาง (ผลลัพธ์) เพื่อสร้างลูกศร'}${READONLY ? '' : '<div class="small muted" style="margin-top:4px"><b>ลบลูกศร:</b> คลิกที่เส้นลูกศรบนแผนที่ แล้วกด “ลบลูกศรนี้” (หรือกด Delete) · ลบพลาดกด “เลิกทำ” ได้</div>'}</div>
       <div class="mapbox" id="map5"></div>
     </div>
   </div>`;
@@ -509,7 +509,8 @@ function buildMapSVG(opts = {}){
   // ลูกศร
   const outN = {}, inN = {}, outI = {}, inI = {};
   S.links.forEach(l => { outN[l.from] = (outN[l.from] || 0) + 1; inN[l.to] = (inN[l.to] || 0) + 1; });
-  S.links.forEach(l => {
+  const cmk = codeMap();
+  S.links.forEach((l, idx) => {
     const a = pos[l.from], b = pos[l.to]; if (!a || !b) return;
     const ko = outI[l.from] = (outI[l.from] || 0) + 1, ki = inI[l.to] = (inI[l.to] || 0) + 1;
     const off = (k, n, w) => Math.max(-w * .35, Math.min(w * .35, (k - 1 - (n - 1) / 2) * 14));
@@ -525,7 +526,9 @@ function buildMapSVG(opts = {}){
       const dy = (y2 - y1) / 2;
       d = `M${x1} ${y1} C${x1} ${y1 + dy} ${x2} ${y2 - dy} ${x2} ${y2}`;
     }
-    arrows.push(`<path d="${d}" fill="none" stroke="#334155" stroke-width="1.7" stroke-opacity=".7" marker-end="url(#ah)"/>`);
+    if (opts.linkEdit){ const sel = opts.selLink === idx;
+      arrows.push(`<g class="lkg${sel ? ' sel' : ''}" data-lk="${idx}" tabindex="0" role="button" aria-label="ลูกศร ${cmk[l.from] || ''} ไป ${cmk[l.to] || ''} กด Enter เพื่อเลือก แล้วกด Delete เพื่อลบ"><path class="lkv" d="${d}" fill="none" stroke="#334155" stroke-width="1.7" stroke-opacity=".7" marker-end="url(#${sel ? 'ahs' : 'ah'})"/><path class="lkhit" d="${d}" fill="none" stroke="#000" stroke-opacity="0" stroke-width="16" pointer-events="stroke"/></g>`);
+    } else arrows.push(`<path d="${d}" fill="none" stroke="#334155" stroke-width="1.7" stroke-opacity=".7" marker-end="url(#ah)"/>`);
   });
 
   // คำอธิบายสัญลักษณ์
@@ -541,7 +544,7 @@ function buildMapSVG(opts = {}){
   const H = ly + 26;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family='${FONT}'>
-    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker></defs>
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker><marker id="ahs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker></defs>
     <rect width="${W}" height="${H}" fill="#fff"/>
     ${bg.join('')}${arrows.join('')}${boxes.join('')}${legend.join('')}
   </svg>`;
@@ -550,10 +553,44 @@ function drawMap(sel, opts){
   const box = $(sel); if (!box) return;
   const go = () => {
     box.innerHTML = buildMapSVG(opts);
-    box.onclick = e => { const g = e.target.closest('[data-id]'); if (g && opts.onClick) opts.onClick(g.dataset.id); };
+    box.onclick = e => {
+      if (e.target.closest('.lkpop')) return;
+      const lk = e.target.closest('[data-lk]'); if (lk && opts.onLink){ opts.onLink(+lk.dataset.lk, e, lk); return; }
+      const g = e.target.closest('[data-id]'); if (g && opts.onClick) opts.onClick(g.dataset.id);
+      else if (opts.onLink && selLink != null){ selLink = null; applySel(); }
+    };
   };
   go();
   if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(go);
+}
+/* ---- เลือก/ลบลูกศรบนแผนที่ (ขั้นที่ 5) ---- */
+function applySel(ev, g0){
+  const box = $('#map5'); if (!box) return;
+  box.querySelectorAll('.lkg').forEach(g => { const on = +g.dataset.lk === selLink; g.classList.toggle('sel', on); const v = g.querySelector('.lkv'); if (v) v.setAttribute('marker-end', on ? 'url(#ahs)' : 'url(#ah)'); });
+  R.querySelectorAll('.linkitem').forEach(li => li.classList.toggle('sel', +li.dataset.i === selLink));
+  const old = box.querySelector('.lkpop'); if (old) old.remove();
+  const l = selLink != null && S.links[selLink]; if (!l) return;
+  const cm = codeMap(), pop = document.createElement('div'); pop.className = 'lkpop'; pop.setAttribute('role', 'group'); pop.setAttribute('aria-label', 'จัดการลูกศร');
+  pop.innerHTML = `<span><b>${cm[l.from] || ''}</b> <b style="color:var(--pri)">→</b> <b>${cm[l.to] || ''}</b></span><button type="button" class="btn sm danger" data-act="delLink" data-i="${selLink}">ลบลูกศรนี้</button><button type="button" class="icon-btn" data-act="lkOff" aria-label="ปิด" title="ปิด">✕</button>`;
+  box.appendChild(pop);
+  const br = box.getBoundingClientRect(), gr = (g0 || box.querySelector('.lkg.sel') || box).getBoundingClientRect();
+  const px = ev && ev.clientX != null ? ev.clientX : gr.left + gr.width / 2, py = ev && ev.clientY != null ? ev.clientY : gr.top + gr.height / 2;
+  const x = px - br.left + box.scrollLeft, y = py - br.top + box.scrollTop;
+  pop.style.left = Math.max(4, Math.min(x + 10, box.scrollWidth - pop.offsetWidth - 6)) + 'px'; pop.style.top = Math.max(4, Math.min(y + 10, box.scrollHeight - pop.offsetHeight - 6)) + 'px';
+}
+function linkPick(i, ev, g){
+  selLink = selLink === i ? null : i; linkSrc = null;
+  applySel(ev, g); if (selLink != null && g && g.focus) g.focus({preventScroll: true});
+}
+function removeLink(i){
+  const l = S.links[i]; if (!l) return;
+  const cm = codeMap(), label = (cm[l.from] || '') + ' → ' + (cm[l.to] || '');
+  S.links.splice(i, 1); selLink = null; setDirty(); render();
+  const undo = () => {
+    if (S.links.some(x => x.from === l.from && x.to === l.to)) return toast('มีลูกศรนี้อยู่แล้ว');
+    S.links.splice(Math.min(i, S.links.length), 0, l); selLink = null; setDirty(); render();
+  };
+  if (window.SXM && SXM.snack) SXM.snack('ลบลูกศร ' + label + ' แล้ว', undo); else toast('ลบลูกศร ' + label + ' แล้ว');
 }
 function linkClick(id){
   if (!linkSrc){ linkSrc = id; render(); return; }
@@ -563,7 +600,7 @@ function linkClick(id){
 function addLink(from, to){
   if (!from || !to || from === to) return toast('เลือกต้นทางและปลายทางที่ต่างกัน');
   if (S.links.some(l => l.from === from && l.to === to)) return toast('มีลูกศรนี้อยู่แล้ว');
-  S.links.push({from, to}); setDirty();
+  S.links.push({from, to}); selLink = null; setDirty();
   const a = objById(from), b = objById(to);
   if (lvl(a.persp) > lvl(b.persp)) toast('⚠ ลูกศรชี้จากบนลงล่าง — ปกติเหตุและผลควรชี้จากล่างขึ้นบน', 4000);
 }
@@ -645,7 +682,7 @@ function bscRows(){
 
 /* ================= การกระทำ (คลิก) ================= */
 const ACT = {
-  tab(el){ step = +el.dataset.s; linkSrc = null; render(); window.scrollTo(0, 0); },
+  tab(el){ step = +el.dataset.s; linkSrc = null; selLink = null; render(); window.scrollTo(0, 0); },
   addTows(el){ S.tows.push({id: uid(), type: el.dataset.t, text: ''}); setDirty(); render(); },
   delTows(el){ S.tows.splice(+el.dataset.i, 1); setDirty(); render(); },
   addTheme(el){
@@ -689,7 +726,9 @@ const ACT = {
     setDirty(); render();
   },
   addLink(){ addLink($('#lkFrom').value, $('#lkTo').value); render(); },
-  delLink(el){ S.links.splice(+el.dataset.i, 1); setDirty(); render(); },
+  delLink(el){ removeLink(+el.dataset.i); },
+  pickLink(el){ const i = +el.dataset.i; selLink = i; linkSrc = null; applySel(null, null); const box = $('#map5'); if (box && box.scrollIntoView) box.scrollIntoView({block: 'nearest', behavior: 'smooth'}); },
+  lkOff(){ selLink = null; applySel(); },
   // dialog
   closeDlg(){ $('#smbDlg').close(); E = null; },
   saveObj(){
@@ -776,7 +815,15 @@ R.addEventListener('input', e => {
 R.addEventListener('change', e => { if (e.target.dataset.e && E && e.target.dataset.re){ E[e.target.dataset.e] = e.target.value; renderDlg(); } });
 R.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.dataset.enter){ e.preventDefault(); ACT[e.target.dataset.enter](e.target); }
+  if (READONLY || step !== 5) return;
+  const t = e.target, tag = (t.tagName || '').toLowerCase(); if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  const g = t.closest && t.closest('.lkg');
+  if (g && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); linkPick(+g.dataset.lk, null, g); return; }
+  if (selLink != null && (e.key === 'Delete' || e.key === 'Backspace')){ e.preventDefault(); removeLink(selLink); }
+  else if (e.key === 'Escape' && selLink != null){ selLink = null; applySel(); }
 });
+const hoverLink = (e, on) => { const li = e.target.closest && e.target.closest('.linkitem'); if (!li) return; const box = $('#map5'), g = box && box.querySelector('.lkg[data-lk="' + li.dataset.i + '"]'); if (g) g.classList.toggle('hov', on); };
+R.addEventListener('mouseover', e => hoverLink(e, true)); R.addEventListener('mouseout', e => hoverLink(e, false));
 $('#smbMapSel').addEventListener('change', async e => {
   const id = e.target.value; if (!id) return;
   if (dirty && !(await ask('มีการแก้ไขที่ยังไม่บันทึก ต้องการเปิดแผนที่อื่นหรือไม่?'))){ renderMapSel(); return; }
@@ -920,6 +967,6 @@ function mount(root, opts){
   if (!ready){ render(); firstLoad(); }
   else { setDirty(dirty); renderMapSel(); render(); }
 }
-window.SMB = {mount, isDirty: () => dirty, example: () => example(),
+window.SMB = {mount, isDirty: () => dirty, example: () => example(), links: () => S.links.map(l => ({from: l.from, to: l.to})), svg: opts => buildMapSVG(opts),
   reset(){ ready = false; lastRO = null; S = blank(); dirty = false; step = 1; maps = []; E = null; linkSrc = null; }};
 })();

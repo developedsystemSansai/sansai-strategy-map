@@ -763,3 +763,20 @@ details.pnone summary{cursor:pointer;color:var(--muted);margin-top:14px;font-siz
 .bm-form textarea{width:100%;resize:vertical;font-weight:400}
 .bm-act{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 @media print{.li .sn-mv{display:none}}
+
+/* ---- ลบลูกศรง่ายๆ บนแผนที่ (ขั้นที่ 5) ---- */
+.smb .mapbox{position:relative}
+.smb .mapbox .lkg{cursor:pointer;outline:none}
+.smb .mapbox .lkg:hover .lkv,.smb .mapbox .lkg.hov .lkv,.smb .mapbox .lkg:focus-visible .lkv{stroke:#0f766e;stroke-width:3.4;stroke-opacity:1}
+.smb .mapbox .lkg.sel .lkv{stroke:#dc2626;stroke-width:3.4;stroke-opacity:1}
+.lkpop{position:absolute;z-index:5;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(20,48,43,.22);padding:6px 6px 6px 12px;display:flex;gap:8px;align-items:center;font-size:14px;white-space:nowrap}
+.lkpop .btn.danger{border-color:#f5b5b1;color:#991b1b;background:#fff}
+.lkpop .btn.danger:hover{background:#fef2f2}
+.smb .linkitem{border-radius:6px}
+.smb .linkitem:hover{background:#f6faf9}
+.smb .linkitem.sel{background:#fef2f2}
+.smb .linkitem .t{cursor:pointer}
+.smb .linkitem .btn{min-width:38px;min-height:38px;flex:none}
+@media print{.lkpop{display:none}}
+/* แก้หน้าขั้นที่ 5 บนจอแคบ: คอลัมน์ฟอร์ม/แผนที่ถูกแผนที่ (กว้างขั้นต่ำ 960px) ดันจนหน้าเลื่อนข้าง */
+.smb .linkgrid>*{min-width:0}

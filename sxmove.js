@@ -149,5 +149,5 @@ document.addEventListener('drop', ev => {
 });
 document.addEventListener('dragend', endDrag);
 
-window.SXM = {use, mvBtn, dock, isDragging, click, act, openMenu, confirmDelete, editModal};
+window.SXM = {use, mvBtn, dock, isDragging, click, act, openMenu, confirmDelete, editModal, snack};
 })();
